@@ -100,5 +100,86 @@ audioBtn.addEventListener("click", () => {
   updateIcon();
 });
 
-/* Glow toggle */
-glowBtn.addEventListener("click", () => document.body.classList.toggle("glow"));
+/********************************************************
+ *  ✨ Fireworks on glowBtn                              *
+ ********************************************************/
+
+// -----  Canvas setup -----
+const fwCanvas = document.getElementById("fireworks-canvas");
+const fwCtx    = fwCanvas.getContext("2d");
+fwCtx.globalCompositeOperation = "lighter";
+
+function resizeFW() {
+  fwCanvas.width  = innerWidth;
+  fwCanvas.height = innerHeight;
+}
+addEventListener("resize", resizeFW);
+resizeFW();
+
+// -----  Particle class -----
+class Particle {
+  constructor(x, y, colour) {
+    const ang   = Math.random() * Math.PI * 2;
+    const speed = Math.random() * 3 + 2.5;
+    this.x  = x;
+    this.y  = y;
+    this.vx = Math.cos(ang) * speed;
+    this.vy = Math.sin(ang) * speed;
+    this.r     = Math.random() * 3 + 3;
+    this.alpha = 1;
+    this.decay = Math.random() * 0.012 + 0.005;
+    this.colour = colour;
+  }
+  update() {
+    this.x += this.vx;
+    this.y += this.vy;
+    this.vy += 0.03;          // gravity
+    this.alpha -= this.decay; // fade-out
+  }
+  draw(ctx) {
+    ctx.save();
+    ctx.globalAlpha = this.alpha;
+    ctx.fillStyle   = this.colour;
+    ctx.shadowBlur  = 10;
+    ctx.shadowColor = this.colour;
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+}
+
+const particles = [];
+const palette   = ["#ffec99", "#ff9b4a", "#ff4e4e"]; // yellow, orange, red
+
+function burst(x, y) {
+  const count = innerWidth < 500 ? 45 : 70;
+  for (let i = 0; i < count; i++) {
+    particles.push(
+      new Particle(x, y, palette[Math.floor(Math.random() * palette.length)])
+    );
+  }
+}
+
+// -----  Animation loop -----
+function animateFW() {
+  fwCtx.clearRect(0, 0, fwCanvas.width, fwCanvas.height);
+  particles.forEach((p, i) => {
+    p.update();
+    p.draw(fwCtx);
+    if (p.alpha <= 0) particles.splice(i, 1);
+  });
+  requestAnimationFrame(animateFW);
+}
+animateFW();
+
+// -----  Hook it up to the ✨ button -----
+glowBtn.title = "Fireworks!";
+glowBtn.addEventListener("click", () => {
+  // 4 random bursts toward the top half of the screen
+  for (let i = 0; i < 4; i++) {
+    const x = Math.random() * fwCanvas.width  * 0.8 + fwCanvas.width  * 0.1;
+    const y = Math.random() * fwCanvas.height * 0.4 + fwCanvas.height * 0.1;
+    burst(x, y);
+  }
+});
