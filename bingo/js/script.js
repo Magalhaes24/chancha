@@ -1,7 +1,7 @@
 /* ------------------------------------------------- */
 /*  CONSTANTS                                        */
 /* ------------------------------------------------- */
-const ROWS = 6, COLS = 5, CELLS = ROWS * COLS;
+const ROWS = 5, COLS = 5, CELLS = ROWS * COLS;
 const STORAGE_KEY = "bingoCardStateV3";
 
 /* ------------------------------------------------- */
@@ -126,7 +126,7 @@ function showBingoBanner(){
 
   /* huge central chancha with heartbeat */
   const big=document.createElement("img");
-  big.src="/img/chancha.png";
+  big.src="/bingo/img/chancha.png";
   Object.assign(big.style,{
     position:"absolute",
     width:"clamp(300px,60vw,700px)",
@@ -157,7 +157,7 @@ function showBingoBanner(){
   const TOTAL=100;
   for(let i=0;i<TOTAL;i++){
     const img=document.createElement("img");
-    img.src="/img/chancha.png";
+    img.src="/bingo/img/chancha.png";
     const size=60+Math.random()*60; // 60–120 px
     Object.assign(img.style,{
       position:"absolute",
