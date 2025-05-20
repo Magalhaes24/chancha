@@ -129,7 +129,7 @@ function showBingoBanner(){
   big.src="/bingo/img/chancha.png";
   Object.assign(big.style,{
     position:"absolute",
-    width:"clamp(300px,60vw,700px)",
+    width:"clamp(300px,160vw,700px)",
     filter:"drop-shadow(0 0 28px rgba(0,0,0,.55))",
     animation:"bingoPop .9s cubic-bezier(.16,1.03,.62,1) forwards, heartBeat 1.6s ease-in-out 1s infinite"
   });
