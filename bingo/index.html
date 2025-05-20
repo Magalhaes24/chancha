@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+
+  <title>Bingo Trieste</title>
+
+  <!-- Google font -->
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap"
+        rel="stylesheet" />
+  <link rel="stylesheet" href="/bingo/css/styles.css" />
+</head>
+
+<body>
+  <div class="bingo-container">
+    <h1 class="bingo-header">
+      <span>B</span><span>I</span><span>N</span><span>G</span><span>O</span>
+    </h1>
+
+    <div id="bingoCard" class="bingo-card"></div>
+
+    <button id="refreshBtn" class="refresh-btn"
+            title="Gerar um novo cartão">🔄 Novo Cartão</button>
+  </div>
+  
+<!-- put this ABOVE script.js -->
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.min.js"></script>
+<script src="/bingo/js/script.js"></script>
+
+</body>
+</html>

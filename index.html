@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chancha Lobby</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <!-- Depth-parallax flag -->
+  <div class="flag-backdrop" aria-hidden="true">
+    <img src="trieste_flag.jpg" alt="" />
+    <div class="glass"></div>
+  </div>
+
+  <!-- Floating lanterns -->
+  <div class="lantern-field" aria-hidden="true"></div>
+
+  <main class="lobby">
+    <h1 class="logo"><span class="trieste">CHANCHA</span><span class="it">.it</span></h1>
+
+    <section class="grid">
+      <a class="tile" href="/bingo/index.html"><span class="icon">🎉</span><h2>Bingo</h2></a>
+      <a class="tile" href="/guess_song/index.html"><span class="icon">🎶</span><h2>Guess&nbsp;the&nbsp;Song</h2></a>
+    </section>
+  </main>
+
+  <!-- control dock -->
+  <div class="dock">
+    <button id="glowBtn"  title="Toggle tile glow">✨</button>
+    <button id="audioBtn" title="Mute / unmute">🔈</button>
+  </div>
+
+  <div class="transition" aria-hidden="true"></div>
+
+  <!-- autoplaying, looping ambient -->
+  <audio id="waves" src="waves.mp3" loop preload="auto"></audio>
+
+  <script src="script.js"></script>
+</body>
+</html>

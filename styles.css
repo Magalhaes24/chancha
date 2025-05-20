@@ -1,0 +1,135 @@
+/*******************
+ *  COLOUR TOKENS
+ ******************/
+ :root{
+    --sunset-1:#ff945a;
+    --sunset-2:#ffbd5d;
+    --sea-1:#015c8f;
+    --sea-2:#0478b7;
+    --marble:#f7f5f1;
+    --shadow:0 8px 26px rgba(0,0,0,.25);
+    --radius:20px;
+  }
+  
+  /* RESET */
+  *,*::before,*::after{box-sizing:border-box;margin:0;}
+  
+  /*******************
+   *  DEPTH BACKDROP
+   ******************/
+  .flag-backdrop{
+    position:fixed;inset:0;overflow:hidden;z-index:-2;
+    perspective:900px;
+  }
+  .flag-backdrop img{
+    position:absolute;inset:-5vmax;
+    width:110%;height:110%;object-fit:cover;
+    transform-origin:center;
+    filter:contrast(.9) brightness(.8);
+    transition:transform .15s ease-out;
+  }
+  .flag-backdrop .glass{
+    position:absolute;inset:0;
+    background:linear-gradient(180deg,rgba(0,0,0,.35),rgba(0,0,0,.45));
+    backdrop-filter:blur(6px);
+  }
+  
+  /*******************
+   *  FLOATING LANTERNS
+   ******************/
+  .lantern-field{
+    position:fixed;inset:0;pointer-events:none;z-index:-1;
+    overflow:hidden;
+  }
+  .lantern{
+    position:absolute;left:50%;top:100%;
+    width:8px;height:12px;border-radius:2px;
+    background:rgba(255,200,120,.8);
+    box-shadow:0 0 12px 2px rgba(255,200,120,.5);
+    transform:translateX(-50%) scale(0);
+    animation:float 12s linear forwards;
+  }
+  @keyframes float{
+    0%  {transform:translateX(var(--startX)) translateY(10vh) scale(.2);opacity:0;}
+    5%  {opacity:1;}
+    100%{transform:translateX(var(--endX)) translateY(-110vh) scale(1);opacity:0;}
+  }
+  
+  /*******************
+   *  HEADING & GRID
+   ******************/
+  body{font-family:"Poppins",sans-serif;min-height:100vh;overflow-x:hidden;color:#fff;}
+  
+  .logo{
+    text-align:center;font-size:clamp(2.8rem,7vw,5rem);
+    font-weight:800;letter-spacing:3px;
+    margin:1.5rem 0 2.5rem;
+    filter:drop-shadow(0 4px 12px rgba(0,0,0,.5));
+  }
+  .logo .trieste{color:var(--marble)}
+  .logo .it{color:var(--sunset-2)}
+  
+  .grid{
+    --min:240px;
+    display:grid;gap:2rem;
+    grid-template-columns:repeat(auto-fit,minmax(min(100%,var(--min)),1fr));
+    padding:0 6vw 6rem;
+  }
+  .tile{
+    position:relative;aspect-ratio:1/1;display:flex;flex-direction:column;align-items:center;
+    justify-content:center;gap:.6rem;text-decoration:none;color:#fff;
+    background:linear-gradient(145deg,var(--sunset-2),var(--sunset-1) 40%,var(--sea-2));
+    border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;
+    transition:transform .45s cubic-bezier(.25,1.25,.5,1.05);
+  }
+  body.glow .tile{box-shadow:0 0 20px 6px rgba(255,184,93,.5),var(--shadow);}
+  .tile:hover{transform:translateY(-8px) rotateX(6deg) rotateY(-4deg)}
+  .tile:active{transform:scale(.96)}
+  .tile::before{
+    content:"";position:absolute;inset:0;opacity:0;
+    background:linear-gradient(60deg,rgba(255,255,255,.35),transparent 60%);
+    transition:opacity .4s ease,transform .8s ease;
+    transform:translateX(-120%);
+  }
+  .tile:hover::before{opacity:1;transform:translateX(120%)}
+  .icon{font-size:clamp(2.6rem,8vw,3.5rem);text-shadow:0 3px 6px rgba(0,0,0,.3)}
+  .tile h2{font-size:clamp(1.1rem,3.5vw,1.6rem);font-weight:600;}
+  
+  /* Ripple */
+  .ripple{position:absolute;border-radius:50%;background:rgba(255,255,255,.45);
+    transform:scale(0);animation:ripple .7s ease-out forwards;pointer-events:none;}
+  @keyframes ripple{to{transform:scale(1);opacity:0;}}
+  
+  /*******************
+   *  TRANSITION SWIPE
+   ******************/
+  .transition{
+    position:fixed;inset:0;z-index:9999;
+    background:linear-gradient(180deg,var(--sea-1),var(--sea-2));
+    transform:translateY(100%);
+  }
+  body.leaving .transition{animation:swipe .7s cubic-bezier(.4,1,.6,1) forwards}
+  @keyframes swipe{to{transform:translateY(0)}}
+  
+  /*******************
+   *  Control Dock
+   ******************/
+  .dock{
+    position:fixed;bottom:1rem;right:1rem;display:flex;flex-direction:column;gap:.7rem;
+    z-index:10001;
+  }
+  .dock button{
+    width:46px;height:46px;border:none;border-radius:50%;
+    background:rgba(0,0,0,.4);color:#fff;font-size:1.4rem;
+    backdrop-filter:blur(4px);cursor:pointer;
+    transition:background .3s;
+  }
+  .dock button:hover{background:rgba(0,0,0,.55)}
+  
+  /*******************
+   *  Media tweaks
+   ******************/
+  @media(max-width:500px){
+    .dock{flex-direction:row;left:50%;transform:translateX(-50%);}
+  }
+  
