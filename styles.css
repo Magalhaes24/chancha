@@ -111,20 +111,42 @@ body.glow .tile{box-shadow:0 0 20px 6px rgba(255,184,93,.5),var(--shadow);}
 body.leaving .transition{animation:swipe .7s cubic-bezier(.4,1,.6,1) forwards}
 @keyframes swipe{to{transform:translateY(0)}}
 
-/*******************
- *  Control Dock
- ******************/
+/* ----------------  ICON DOCK  ---------------- */
 .dock{
-  position:fixed;bottom:1rem;right:1rem;display:flex;flex-direction:column;gap:.7rem;
-  z-index:10001;
-}
-.dock button{
-  width:46px;height:46px;border:none;border-radius:50%;
-  background:rgba(0,0,0,.4);color:#fff;font-size:1.4rem;
-  backdrop-filter:blur(4px);cursor:pointer;
-  transition:background .3s;
-}
-.dock button:hover{background:rgba(0,0,0,.55)}
+    position:fixed;
+    bottom:1rem;
+    left:50%;                 /* centred for every screen width */
+    transform:translateX(-50%);
+    display:flex;
+    gap:.9rem;
+    z-index:10001;
+  }
+  
+  /* circular buttons */
+  .icon-btn{
+    /* size scales with viewport – min 46 px, tops out at 60 px */
+    width:clamp(46px,14vw,60px);
+    height:clamp(46px,14vw,60px);
+    display:flex; align-items:center; justify-content:center;
+    border:none; border-radius:50%;
+    background:rgba(0,0,0,.45);
+    backdrop-filter:blur(4px);
+    cursor:pointer;
+    transition:background .3s, transform .2s;
+  }
+  .icon-btn:hover   { background:rgba(0,0,0,.6); }
+  .icon-btn:active  { transform:scale(.94); }
+  
+  /* icons inside the buttons */
+  .icon-btn img{
+    width:70%; height:70%;
+    object-fit:contain;
+    pointer-events:none;        /* so taps hit the button, not the img */
+  }
+  
+  /* audio muted state – we’ll flip this class in JS */
+  .icon-btn.muted img{ opacity:.35; }
+  
 
 /*******************
  *  Media tweaks
