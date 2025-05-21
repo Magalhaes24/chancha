@@ -3,14 +3,51 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Chancha Lobby</title>
+
+  <!-- ――― PRIMARY SEO ――― -->
+  <title>Chancha</title>
+  <meta name="description"
+        content="Chancha em Trieste" />
+  <link rel="canonical" href="https://chancha.it/" />
+
+  <!-- ――― OPEN GRAPH / SOCIAL CARDS ――― -->
+  <meta property="og:type"        content="website" />
+  <meta property="og:title"       content="Chancha – online party games" />
+  <meta property="og:description" content="Play Bingo or Guess the Song instantly – no installs." />
+  <meta property="og:image"       content="https://chancha.it/logo.png" />
+  <meta property="og:url"         content="https://chancha.it/" />
+
+  <meta name="twitter:card"       content="summary_large_image" />
+  <meta name="twitter:title"      content="Chancha – online party games" />
+  <meta name="twitter:description" content="Grab your phone and join a round of Bingo or Guess the Song right in the browser." />
+  <meta name="twitter:image"      content="https://chancha.it/logo.png" />
+
+  <!-- ――― FAVICONS ――― -->
+  <link rel="icon" href="/favicon.ico" />
+  <link rel="apple-touch-icon" sizes="180x180" href="/favicon.ico" />
+
+  <!-- ――― STRUCTURED DATA ――― -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "name": "Chancha",
+    "url": "https://chancha.it/",
+    "logo": "https://chancha.it/logo.png",
+    "sameAs": [
+      "https://www.instagram.com/chancha",
+      "https://twitter.com/chancha"
+    ]
+  }
+  </script>
+
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
 
-  <!-- Depth-parallax flag -->
+  <!-- Depth‐parallax flag -->
   <div class="flag-backdrop" aria-hidden="true">
-    <img src="trieste_flag.jpg" alt="" />
+    <img src="trieste_flag.jpg" alt="Trieste flag waving" />
     <div class="glass"></div>
   </div>
 
@@ -18,31 +55,37 @@
   <div class="lantern-field" aria-hidden="true"></div>
 
   <main class="lobby">
-    <h1 class="logo"><span class="trieste">CHANCHA</span><span class="it">.it</span></h1>
+    <h1 class="logo">
+      <span class="trieste">CHANCHA</span><span class="it">.it</span>
+    </h1>
 
     <section class="grid">
-      <a class="tile" href="/bingo/index.html"><span class="icon">🎉</span><h2>Bingo</h2></a>
-      <a class="tile" href="/guess_song/index.html"><span class="icon">🎶</span><h2>Guess&nbsp;the&nbsp;Song</h2></a>
+      <a class="tile" href="/bingo/index.html">
+        <span class="icon">🎉</span>
+        <h2>Bingo</h2>
+      </a>
+      <a class="tile" href="/guess_song/index.html">
+        <span class="icon">🎶</span>
+        <h2>Guess&nbsp;the&nbsp;Song</h2>
+      </a>
     </section>
   </main>
 
-  <!-- --- CONTROL DOCK (bottom-centre) --- -->
+  <!-- ――― CONTROL DOCK (bottom‐centre) ――― -->
   <div class="dock">
-      <!-- Fireworks launcher -->
-      <button id="glowBtn" class="icon-btn" title="Fireworks">
-      <img src="firework.png" alt="">
-      </button>
-   
-      <!-- Sound on/off -->
-      <button id="audioBtn" class="icon-btn" title="Mute / un-mute">
-      <img id="audioIcon" src="sound.png" alt="">
-      </button>
+    <button id="glowBtn" class="icon-btn" title="Fireworks">
+      <img src="firework.png" alt="Fireworks icon" />
+    </button>
+    <button id="audioBtn" class="icon-btn" title="Mute / un-mute">
+      <img id="audioIcon" src="sound.png" alt="Sound on/off icon" />
+    </button>
   </div>
 
   <div class="transition" aria-hidden="true"></div>
 
   <!-- autoplaying, looping ambient -->
   <audio id="waves" src="waves.mp3" loop preload="auto"></audio>
+
   <!-- Fireworks canvas (on its own layer) -->
   <canvas id="fireworks-canvas" class="layer" aria-hidden="true"></canvas>
 
