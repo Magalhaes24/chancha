@@ -64,10 +64,11 @@ document.addEventListener("animationend",
  ********************************************************/
 const waves    = document.getElementById("waves");
 const audioBtn = document.getElementById("audioBtn");
-const glowBtn  = document.getElementById("glowBtn");
+const glowBtn  = document.getElementById("glowBtn");   // fireworks
 
+/* --- icon helper: add/remove .muted instead of changing text --- */
 function updateIcon() {
-  audioBtn.textContent = waves.muted ? "🔇" : "🔈";
+  audioBtn.classList.toggle("muted", waves.muted);
 }
 
 /* Try to start immediately */
@@ -183,3 +184,4 @@ glowBtn.addEventListener("click", () => {
     burst(x, y);
   }
 });
+
