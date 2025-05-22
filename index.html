@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt-IT"> <!-- portuguese + Italian locale for “em Trieste” context -->
+<html lang="pt-IT">
 <head>
   <meta charset="UTF-8" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
@@ -12,26 +12,26 @@
   <meta name="keywords" content="Chancha, Chancha em Trieste, jogos online, bingo, adivinhe a música, Trieste" />
   <link rel="canonical" href="https://chancha.it/" />
   <meta name="robots" content="index, follow" />
-  <link rel="sitemap" type="application/xml" title="Sitemap" href="/sitemap.xml" />
+  <link rel="sitemap" type="application/xml" title="Sitemap" href="/assets/sitemap.xml" />
 
   <!-- ――― OPEN GRAPH / SOCIAL CARDS ――― -->
   <meta property="og:type"        content="website" />
   <meta property="og:site_name"   content="Chancha em Trieste" />
   <meta property="og:title"       content="Chancha – jogos online" />
   <meta property="og:description" content="Jogue Bingo ou Adivinhe a Música, sem instalações." />
-  <meta property="og:image"       content="https://chancha.it/logo.png" />
+  <meta property="og:image"       content="https://chancha.it/assets/logo.png" />
   <meta property="og:url"         content="https://chancha.it/" />
 
   <meta name="twitter:card"       content="summary_large_image" />
   <meta name="twitter:site"       content="@chancha" />
   <meta name="twitter:title"      content="Chancha – jogos de festa online" />
   <meta name="twitter:description" content="Participe de Bingo ou Adivinhe a Música em Chancha.it – sem downloads." />
-  <meta name="twitter:image"      content="https://chancha.it/logo.png" />
+  <meta name="twitter:image"      content="https://chancha.it/assets/logo.png" />
 
   <!-- ――― FAVICONS ――― -->
-  <link rel="icon" type="image/x-icon" href="/favicon.ico" />
-  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" />
-  <link rel="apple-touch-icon" sizes="180x180" href="/favicon.ico" />
+  <link rel="icon" type="image/x-icon" href="/assets/favicon.ico" />
+  <link rel="shortcut icon" type="image/x-icon" href="/assets/favicon.ico" />
+  <link rel="apple-touch-icon" sizes="180x180" href="/assets/favicon.ico" />
 
   <!-- ――― STRUCTURED DATA ――― -->
   <script type="application/ld+json">
@@ -42,7 +42,7 @@
         "@type": "Organization",
         "name": "Chancha",
         "url": "https://chancha.it/",
-        "logo": "https://chancha.it/logo.png",
+        "logo": "https://chancha.it/assets/logo.png",
         "sameAs": [
           "https://www.instagram.com/chancha",
           "https://twitter.com/chancha"
@@ -88,7 +88,7 @@
 
   <!-- Depth‐parallax flag -->
   <div class="flag-backdrop" aria-hidden="true">
-    <img src="trieste_flag.jpg" alt="Bandeira de Trieste tremulando" />
+    <img src="assets/trieste_flag.jpg" alt="Bandeira de Trieste tremulando" />
     <div class="glass"></div>
   </div>
 
@@ -111,17 +111,17 @@
   <!-- ――― CONTROL DOCK (bottom‐centre) ――― -->
   <div class="dock">
     <button id="glowBtn" class="icon-btn" title="Fireworks">
-      <img src="firework.png" alt="Ícone de fogos de artifício" />
+      <img src="assets/firework.png" alt="Ícone de fogos de artifício" />
     </button>
     <button id="audioBtn" class="icon-btn" title="Silenciar / ativar som">
-      <img id="audioIcon" src="sound.png" alt="Ícone de som liga/desliga" />
+      <img id="audioIcon" src="assets/sound.png" alt="Ícone de som liga/desliga" />
     </button>
   </div>
 
   <div class="transition" aria-hidden="true"></div>
 
   <!-- autoplaying, looping ambient -->
-  <audio id="waves" src="waves.mp3" loop preload="auto"></audio>
+  <audio id="waves" src="assets/waves.mp3" loop preload="auto"></audio>
 
   <!-- Fireworks canvas (on its own layer) -->
   <canvas id="fireworks-canvas" class="layer" aria-hidden="true"></canvas>
