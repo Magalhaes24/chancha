@@ -1,47 +1,78 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pt-IT"> <!-- portuguese + Italian locale for “em Trieste” context -->
 <head>
   <meta charset="UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
   <!-- ――― PRIMARY SEO ――― -->
-  <title>Chancha</title>
+  <title>Chancha em Trieste – Jogos de Festa Online | Chancha.it</title>
   <meta name="description"
-        content="Chancha Concha Chacha Choncha em Trieste" />
+        content="Chancha em Trieste, um site feito especificamente para a Chancha" />
+  <meta name="keywords" content="Chancha, Chancha em Trieste, jogos online, bingo, adivinhe a música, Trieste" />
   <link rel="canonical" href="https://chancha.it/" />
+  <meta name="robots" content="index, follow" />
+  <link rel="sitemap" type="application/xml" title="Sitemap" href="/sitemap.xml" />
 
   <!-- ――― OPEN GRAPH / SOCIAL CARDS ――― -->
   <meta property="og:type"        content="website" />
-  <meta property="og:title"       content="Chancha – online party games" />
-  <meta property="og:description" content="Play Bingo or Guess the Song instantly – no installs." />
+  <meta property="og:site_name"   content="Chancha em Trieste" />
+  <meta property="og:title"       content="Chancha – jogos online" />
+  <meta property="og:description" content="Jogue Bingo ou Adivinhe a Música, sem instalações." />
   <meta property="og:image"       content="https://chancha.it/logo.png" />
   <meta property="og:url"         content="https://chancha.it/" />
 
   <meta name="twitter:card"       content="summary_large_image" />
-  <meta name="twitter:title"      content="Chancha – online party games" />
-  <meta name="twitter:description" content="Grab your phone and join a round of Bingo or Guess the Song right in the browser." />
+  <meta name="twitter:site"       content="@chancha" />
+  <meta name="twitter:title"      content="Chancha – jogos de festa online" />
+  <meta name="twitter:description" content="Participe de Bingo ou Adivinhe a Música em Chancha.it – sem downloads." />
   <meta name="twitter:image"      content="https://chancha.it/logo.png" />
 
   <!-- ――― FAVICONS ――― -->
-  <!-- Standard favicon -->
-  <link rel="icon" type="image/x-icon" href="/favicon.ico">
-  <!-- Legacy IE shortcut -->
-  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico">
-  <!-- Apple touch icon (you can replace with a 180×180 PNG if you like) -->
-  <link rel="apple-touch-icon" sizes="180x180" href="/favicon.ico">
-
+  <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" />
+  <link rel="apple-touch-icon" sizes="180x180" href="/favicon.ico" />
 
   <!-- ――― STRUCTURED DATA ――― -->
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
-    "@type": "Organization",
-    "name": "Chancha",
-    "url": "https://chancha.it/",
-    "logo": "https://chancha.it/logo.png",
-    "sameAs": [
-      "https://www.instagram.com/chancha",
-      "https://twitter.com/chancha"
+    "@graph": [
+      {
+        "@type": "Organization",
+        "name": "Chancha",
+        "url": "https://chancha.it/",
+        "logo": "https://chancha.it/logo.png",
+        "sameAs": [
+          "https://www.instagram.com/chancha",
+          "https://twitter.com/chancha"
+        ]
+      },
+      {
+        "@type": "WebSite",
+        "url": "https://chancha.it/",
+        "name": "Chancha em Trieste",
+        "potentialAction": {
+          "@type": "SearchAction",
+          "target": "https://chancha.it/?s={search_term_string}",
+          "query-input": "required name=search_term_string"
+        }
+      },
+      {
+        "@type": "WebPage",
+        "url": "https://chancha.it/",
+        "name": "Chancha em Trieste – Landing Page",
+        "isPartOf": { "@id": "https://chancha.it/#website" },
+        "breadcrumb": {
+          "@type": "BreadcrumbList",
+          "itemListElement": [{
+            "@type": "ListItem",
+            "position": 1,
+            "name": "Home",
+            "item": "https://chancha.it/"
+          }]
+        }
+      }
     ]
   }
   </script>
@@ -49,10 +80,14 @@
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
+  <header>
+    <h1>Chancha em Trieste</h1>
+    <p>Bem-vindo aos melhores jogos de festa online: Bingo e Adivinhe a Música.</p>
+  </header>
 
   <!-- Depth‐parallax flag -->
   <div class="flag-backdrop" aria-hidden="true">
-    <img src="trieste_flag.jpg" alt="Trieste flag waving" />
+    <img src="trieste_flag.jpg" alt="Bandeira de Trieste tremulando" />
     <div class="glass"></div>
   </div>
 
@@ -60,18 +95,16 @@
   <div class="lantern-field" aria-hidden="true"></div>
 
   <main class="lobby">
-    <h1 class="logo">
-      <span class="trieste">CHANCHA</span><span class="it">.it</span>
-    </h1>
-
     <section class="grid">
       <a class="tile" href="/bingo/index.html">
-        <span class="icon">🎉</span>
-        <h2>Bingo</h2>
+        <span class="icon" aria-hidden="true">🎉</span>
+        <h2>Bingo Online em Trieste</h2>
+        <p>Jogue Bingo em tempo real direto no navegador.</p>
       </a>
       <a class="tile" href="/guess_song/index.html">
-        <span class="icon">🎶</span>
-        <h2>Guess&nbsp;the&nbsp;Song</h2>
+        <span class="icon" aria-hidden="true">🎶</span>
+        <h2>Adivinhe a Música</h2>
+        <p>Teste seus conhecimentos musicais com amigos.</p>
       </a>
     </section>
   </main>
@@ -79,10 +112,10 @@
   <!-- ――― CONTROL DOCK (bottom‐centre) ――― -->
   <div class="dock">
     <button id="glowBtn" class="icon-btn" title="Fireworks">
-      <img src="firework.png" alt="Fireworks icon" />
+      <img src="firework.png" alt="Ícone de fogos de artifício" />
     </button>
-    <button id="audioBtn" class="icon-btn" title="Mute / un-mute">
-      <img id="audioIcon" src="sound.png" alt="Sound on/off icon" />
+    <button id="audioBtn" class="icon-btn" title="Silenciar / ativar som">
+      <img id="audioIcon" src="sound.png" alt="Ícone de som liga/desliga" />
     </button>
   </div>
 
