@@ -218,3 +218,32 @@ button:hover {
 #confirmPlaylist:hover {
   background-color: #45a049;
 }
+
+  
+  /* ─── Home Button (circular with icon) ─────────────────── */
+  #homeBtn {
+    position: fixed;
+    bottom: 1rem;
+    right: 1rem;
+
+    width: 3.5rem;
+    height: 3.5rem;
+    padding: 0;                         /* remove default padding */
+
+    background-color: rgba(0, 0, 0, 0.7);
+    background-image: url('/assets/back_btn.png');
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 1.8rem 1.8rem;     /* adjust icon size */
+
+    border: none;
+    border-radius: 50%;                 /* make it a circle */
+    cursor: pointer;
+
+    z-index: 200;
+    transition: background-color 0.2s ease;
+  }
+
+  #homeBtn:hover {
+    background-color: rgba(0, 0, 0, 0.85);
+  }
