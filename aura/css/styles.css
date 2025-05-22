@@ -1,0 +1,173 @@
+:root {
+  --primary:     #79c800;
+  --negative:    #e74c3c;
+  --bg:          #f0f4f8;
+  --card-bg:     #fff;
+  --text-dark:   #333;
+  --aura-blue-1: rgba(0,150,255,0.7);
+  --aura-blue-2: rgba(0,200,255,0.5);
+  --aura-gold-1: rgba(255,215,0,0.8);
+  --aura-gold-2: rgba(255,250,0,0.6);
+  --aura-speed:  5s;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: 'Poppins', sans-serif;
+  background: var(--bg);
+  color: var(--text-dark);
+}
+
+header {
+  text-align: center;
+  padding: 1.5rem 0;
+}
+header h1 {
+  margin: 0;
+  font-size: 2rem;
+  color: var(--primary);
+}
+
+.counter-grid {
+  display: flex;
+  gap: 1.5rem;
+  justify-content: center;
+  flex-wrap: wrap;
+  padding: 2rem;
+}
+
+.counter-card {
+  background: var(--card-bg);
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  text-align: center;
+  padding: 1.5rem;
+  width: 240px;
+}
+
+/* ─── Avatar & New Aura Ring ──────────────────────────── */
+.avatar-wrapper {
+  position: relative;
+  display: inline-block;
+  margin-bottom: 1rem;
+  /* slight bobbing */
+  animation: sway 4s ease-in-out infinite;
+}
+
+.avatar-wrapper img.avatar {
+  display: block;
+  width: 100%;
+  aspect-ratio: 9/16;
+  object-fit: cover;
+  border-radius: 0;
+}
+
+/* ring behind avatar */
+.avatar-wrapper::before {
+  content: "";
+  position: absolute;
+  top: -6px;  left: -6px;
+  right: -6px; bottom: -6px;
+  border-radius: 16px; /* adjust to match avatar corners */
+  background: transparent;
+  filter: blur(16px);
+  z-index: -1;
+  animation: rotateAura var(--aura-speed) linear infinite;
+}
+
+/* blue ring */
+.avatar-wrapper.aura-blue::before {
+  background: conic-gradient(
+    from 0deg,
+    var(--aura-blue-1),
+    var(--aura-blue-2),
+    var(--aura-blue-1)
+  );
+}
+
+/* gold ring */
+.avatar-wrapper.aura-gold::before {
+  background: conic-gradient(
+    from 0deg,
+    var(--aura-gold-1),
+    var(--aura-gold-2),
+    var(--aura-gold-1)
+  );
+}
+
+/* ─── Aura Animation ──────────────────────────────────── */
+@keyframes rotateAura {
+  to { transform: rotate(360deg); }
+}
+
+/* ─── Name & Points ───────────────────────────────────── */
+.counter-card h2 {
+  margin: 0.5rem 0;
+  font-size: 1.25rem;
+}
+.points {
+  font-size: 2.5rem;
+  font-weight: 600;
+  margin: 0.5rem 0 1rem;
+  transition: color 0.2s ease;
+}
+.points.positive { color: var(--primary); }
+.points.negative { color: var(--negative); }
+
+/* ─── Controls ───────────────────────────────────────── */
+.controls {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.controls button {
+  background: var(--primary);
+  border: none;
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 600;
+  padding: 0.5rem 0.8rem;
+  border-radius: 8px;
+  cursor: pointer;
+  min-width: 3rem;
+  transition: background 0.2s;
+}
+.controls button.dec { background: #e55353; }
+.controls button:hover { opacity: 0.9; }
+
+.controls .manual {
+  width: 4.5rem;
+  padding: 0.4rem;
+  font-size: 1rem;
+  border: 2px solid var(--primary);
+  border-radius: 8px;
+  text-align: center;
+  color: var(--text-dark);
+}
+
+/* ─── Home Button ─────────────────────────────────────── */
+#homeBtn {
+  position: fixed;
+  bottom: 1rem;
+  right: 1rem;
+  width: 3.5rem;
+  height: 3.5rem;
+  padding: 0;
+  background-color: rgba(0,0,0,0.7);
+  background-image: url('/assets/back_btn.png');
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 1.8rem 1.8rem;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  z-index: 200;
+  transition: background-color 0.2s ease;
+}
+#homeBtn:hover {
+  background-color: rgba(0,0,0,0.85);
+}
