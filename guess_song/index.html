@@ -1,60 +1,170 @@
+<!--
+Playlist Heardle – fully‑wired demo
+=================================
+* Uses the **hard‑coded** Spotify credentials & playlist you provided – no user input needed.
+* Grabs a fresh Client‑Credentials token on load (auto‑renews after 1 h) and immediately starts the game with
+  playlist → https://open.spotify.com/playlist/2Eg9MpQckgDbdKCwpyFY3o?si=c354d72972d141ba
+* Sprinkled with **console.log()** calls so you can watch what happens in DevTools.
+
+⚠️  **Do NOT deploy these secrets to a public site!**  Everyone who views the source could steal them.
+     For anything beyond a private test page you should switch to PKCE or put the token exchange on a backend.
+-->
 <!DOCTYPE html>
-<html lang="pt">
+<html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Jogo dos D.A.M.A.</title>
-  <link rel="stylesheet" href="style.css" />
+<meta charset="UTF-8">
+<title>Playlist Heardle</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+:root{--bg:#0d1117;--card:#161b22;--accent:#1db954;--text:#e6edf3;--fail:#d73a49;}
+*{box-sizing:border-box;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif}
+body{margin:0;display:flex;flex-direction:column;align-items:center;min-height:100vh;padding:2rem;background:var(--bg);color:var(--text)}
+h1{margin-top:0;font-size:2rem}
+.card{background:var(--card);padding:1.5rem;border-radius:1rem;width:100%;max-width:480px;box-shadow:0 4px 12px rgba(0,0,0,.2)}
+input,button{padding:.6rem 1rem;font-size:1rem;border:none;border-radius:.5rem}
+button{background:var(--accent);color:#fff;cursor:pointer;margin-top:.5rem}
+button[disabled]{opacity:.4;cursor:not-allowed}
+.hide{display:none}
+#loader{margin:1rem 0}
+#message{margin-top:1rem;height:1.5rem}
+.correct{color:var(--accent)}
+.wrong{color:var(--fail)}
+#attempts{margin-top:.5rem;max-height:100px;overflow-y:auto}
+#attempts div{padding:.3rem .4rem;border-bottom:1px solid #30363d}
+</style>
 </head>
 <body>
-  <!-- POP-UP DE INSTRUÇÕES -->
-  <div id="popup" class="popup-overlay">
-    <div class="popup-content">
-      <h2>Como Jogar 🎧</h2>
-      <p>
-        O teu objetivo é adivinhar o nome da música.<br><br>
-        - Ouve um excerto de <strong>1 segundo</strong> da música.<br>
-        - Se não conseguires adivinhar, carrega em <strong>Ouvir 5s</strong>.<br>
-        - Depois, poderás ouvir <strong>10 segundos</strong>.<br><br>
-        Tens <strong>3 tentativas no total por música</strong> para acertar.<br>
-        - Se acertares com 1s, ganhas <strong>10 pontos</strong>.<br>
-        - Com 5s ganhas <strong>3 pontos</strong>.<br>
-        - Com 10s ganhas <strong>1 ponto</strong>.<br><br>
-        Se falhares 3 vezes ou chegares ao fim dos 10 segundos sem sucesso, perdes essa ronda e vês a solução.
-      </p>
-      <button id="startGame">Compreendi</button>
-    </div>
+<h1>Playlist Heardle</h1>
+<div class="card">
+  <div id="loader">Loading playlist…</div>
+  <div id="gameArea" class="hide">
+    <audio id="audio" preload="auto"></audio>
+    <div id="attempts"></div>
+    <input id="guessInput" placeholder="Type your guess" list="suggestions" autocomplete="off">
+    <datalist id="suggestions"></datalist>
+    <button id="guessBtn">Guess</button>
+    <div id="message"></div>
+    <div id="reveal" class="hide"></div>
+    <button id="nextBtn" class="hide">Play again</button>
   </div>
+</div>
 
-  <!-- CONTEÚDO DO JOGO -->
-  <div class="container hidden" id="gameContainer">
-    <h1 class="game_title">🎵 Adivinha a música 🎵</h1>
-    <p id="score">Score: 0</p>
+<script>
+/********************** CONSTANTS ************************/
+const CLIENT_ID     = 'e1141482037c4c08a0d9670a936a0a9d';
+const CLIENT_SECRET = '9862fc5d083d42af8c3035035b55cb57';
+const PLAYLIST_URL  = 'https://open.spotify.com/playlist/2Eg9MpQckgDbdKCwpyFY3o?si=c354d72972d141ba';
+const EXPIRY_MS     = 3600*1000; // 1 h
+/********************** DOM ******************************/
+const $            = id=>document.getElementById(id);
+const loader       = $("loader");
+const gameArea     = $("gameArea");
+const audio        = $("audio");
+const attemptsDiv  = $("attempts");
+const suggestions  = $("suggestions");
+const guessInp     = $("guessInput");
+const guessBtn     = $("guessBtn");
+const message      = $("message");
+const reveal       = $("reveal");
+const nextBtn      = $("nextBtn");
+/******************* STORAGE HELPERS *********************/
+function now(){return Date.now();}
+function save(k,v){localStorage.setItem(k,v);}  
+function load(k){return localStorage.getItem(k);} 
+const TOKEN_KEY='ph_auto_token'; const TOKEN_TS='ph_auto_ts';
+function cacheToken(tok,ttl){save(TOKEN_KEY,tok); save(TOKEN_TS, now().toString()); save('ph_auto_ttl',ttl.toString());}
+function getCachedToken(){
+  const tok=load(TOKEN_KEY); const ts=parseInt(load(TOKEN_TS)||0,10); const ttl=parseInt(load('ph_auto_ttl')||EXPIRY_MS,10);
+  return (tok && now()-ts < ttl-5e3) ? tok : null;
+}
+/********************** LOGIC ****************************/
+let tracks=[];let current;let attempt=0;const maxAttempts=6;const snippets=[1,2,4,7,11,16];
 
-    <iframe id="spotify-embed" width="100%" height="80" frameborder="0" allowtransparency="true" allow="encrypted-media"></iframe>
+async function fetchClientCredsToken(){
+  console.log('[Token] Requesting new client‑credentials token…');
+  const body=new URLSearchParams({grant_type:'client_credentials'});
+  const res=await fetch('https://accounts.spotify.com/api/token',{
+    method:'POST',
+    headers:{'Content-Type':'application/x-www-form-urlencoded','Authorization':'Basic '+btoa(CLIENT_ID+':'+CLIENT_SECRET)},
+    body
+  });
+  if(!res.ok) throw new Error('Client‑credentials request failed '+res.status);
+  const json=await res.json();
+  console.log('[Token] Received – expires_in',json.expires_in,'s');
+  cacheToken(json.access_token,json.expires_in*1000);
+  return json.access_token;
+}
+async function ensureToken(){
+  const cached=getCachedToken();
+  if(cached){console.log('[Token] Using cached token');return cached;}
+  return fetchClientCredsToken();
+}
+async function loadSpotify(url,token){
+  console.log('[Playlist] Loading tracks from',url);
+  const idMatch=url.match(/playlist\/([a-zA-Z0-9]+)/);
+  if(!idMatch) throw new Error('Could not parse playlist id');
+  const id=idMatch[1]; const hdrs={Authorization:'Bearer '+token};
+  let next=`https://api.spotify.com/v1/playlists/${id}/tracks?fields=items(track(name,preview_url,artists(name))),next&limit=100`;
+  const list=[];
+  while(next){
+    console.log('[Playlist] Fetching',next);
+    const res=await fetch(next,{headers:hdrs}); if(!res.ok){
+      if(res.status===401){ // token expired mid‑flight
+        console.warn('[Playlist] Token expired – refreshing');
+        token=await fetchClientCredsToken(); hdrs.Authorization='Bearer '+token; continue; // retry loop
+      }
+      throw new Error('Spotify error '+res.status);
+    }
+    const data=await res.json();
+    data.items.forEach(it=>{const t=it.track;if(t&&t.preview_url)list.push({name:t.name,artist:t.artists.map(a=>a.name).join(', '),preview:t.preview_url});});
+    next=data.next;
+  }
+  console.log(`[Playlist] Got ${list.length} tracks with previews`);
+  return list;
+}
+function buildAutocomplete(){
+  suggestions.innerHTML='';
+  tracks.forEach(t=>{const o=document.createElement('option');o.value=`${t.name} – ${t.artist}`;suggestions.appendChild(o);});
+}
+function playSnippet(){
+  audio.src=current.preview;audio.currentTime=0;
+  audio.play().catch(console.error);
+  setTimeout(()=>audio.pause(),snippets[Math.min(attempt,snippets.length-1)]*1000);
+  console.log('[Game] Playing snippet',snippets[Math.min(attempt,snippets.length-1)],'s');
+}
+function startGame(){
+  attempt=0;attemptsDiv.innerHTML='';message.textContent='';reveal.classList.add('hide');nextBtn.classList.add('hide');
+  current=tracks[Math.floor(Math.random()*tracks.length)];
+  console.log('[Game] New round – answer is',current.name,'–',current.artist);
+  buildAutocomplete(); playSnippet(); gameArea.classList.remove('hide');
+}
+function handleGuess(){
+  const val=guessInp.value.trim();if(!val)return;
+  const correct=val.toLowerCase().includes(current.name.toLowerCase());
+  const div=document.createElement('div');div.textContent=val;div.classList.add(correct?'correct':'wrong');attemptsDiv.appendChild(div);
+  console.log('[Game] Guess',attempt+1,':',val,'→',correct?'CORRECT':'wrong');
+  attempt++;
+  if(correct||attempt>=maxAttempts) endGame(correct); else {message.textContent='Incorrect – try again'; playSnippet();}
+  guessInp.value='';
+}
+function endGame(won){
+  message.textContent=won?'🎉 Correct!':'💀 Out of attempts';
+  reveal.textContent=`Answer: ${current.name} – ${current.artist}`; reveal.classList.remove('hide'); nextBtn.classList.remove('hide'); audio.pause();
+  console.log('[Game] Round ended –',won?'won':'lost');
+}
+/******************** EVENT BINDINGS *******************/
+window.addEventListener('DOMContentLoaded',async()=>{
+  try{
+    const token=await ensureToken();
+    const list=await loadSpotify(PLAYLIST_URL,token);
+    if(!list.length) throw new Error('No playable previews in playlist');
+    tracks=list; loader.classList.add('hide'); startGame();
+  }catch(e){ loader.textContent='Error: '+e.message; console.error(e); }
+});
 
-    <div class="guess-section">
-      <input type="text" id="guessInput" placeholder="Nome da música..." />
-      <button id="submitGuess">Submeter</button>
-      <p id="guessResult"></p>
-    </div>
-
-    <p id="attempts">❌ Tentativas: 0 / 3</p>
-
-    <button id="listen">🔊 Ouvir</button>
-    <button id="next">⏭️ Avançar</button>
-
-    <p id="song-name" class="hidden"></p>
-  </div>
-
-  <!-- “Voltar” Button -->
-  <button
-    id="homeBtn"
-    aria-label="Voltar para página principal"
-    title="Voltar para página principal"
-    onclick="window.location.href='../index.html'">
-  </button>
-
-  <script src="script.js"></script>
+guessBtn.addEventListener('click',handleGuess);
+guessInp.addEventListener('keydown',e=>{if(e.key==='Enter')handleGuess();});
+nextBtn.addEventListener('click',startGame);
+</script>
 </body>
 </html>
