@@ -1,170 +1,488 @@
-<!--
-Playlist Heardle – fully‑wired demo
-=================================
-* Uses the **hard‑coded** Spotify credentials & playlist you provided – no user input needed.
-* Grabs a fresh Client‑Credentials token on load (auto‑renews after 1 h) and immediately starts the game with
-  playlist → https://open.spotify.com/playlist/2Eg9MpQckgDbdKCwpyFY3o?si=c354d72972d141ba
-* Sprinkled with **console.log()** calls so you can watch what happens in DevTools.
-
-⚠️  **Do NOT deploy these secrets to a public site!**  Everyone who views the source could steal them.
-     For anything beyond a private test page you should switch to PKCE or put the token exchange on a backend.
--->
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>Playlist Heardle</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<style>
-:root{--bg:#0d1117;--card:#161b22;--accent:#1db954;--text:#e6edf3;--fail:#d73a49;}
-*{box-sizing:border-box;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif}
-body{margin:0;display:flex;flex-direction:column;align-items:center;min-height:100vh;padding:2rem;background:var(--bg);color:var(--text)}
-h1{margin-top:0;font-size:2rem}
-.card{background:var(--card);padding:1.5rem;border-radius:1rem;width:100%;max-width:480px;box-shadow:0 4px 12px rgba(0,0,0,.2)}
-input,button{padding:.6rem 1rem;font-size:1rem;border:none;border-radius:.5rem}
-button{background:var(--accent);color:#fff;cursor:pointer;margin-top:.5rem}
-button[disabled]{opacity:.4;cursor:not-allowed}
-.hide{display:none}
-#loader{margin:1rem 0}
-#message{margin-top:1rem;height:1.5rem}
-.correct{color:var(--accent)}
-.wrong{color:var(--fail)}
-#attempts{margin-top:.5rem;max-height:100px;overflow-y:auto}
-#attempts div{padding:.3rem .4rem;border-bottom:1px solid #30363d}
-</style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Guess the Song – Spotify Playlist (1‑Second Snippets)</title>
+  <style>
+    :root {
+      --bg: #0b0f14;
+      --card: #121826;
+      --muted: #7c8aa5;
+      --text: #e6edf6;
+      --accent: #22c55e;
+      --accent2: #60a5fa;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+      --radius: 18px;
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji";
+      color: var(--text); background: radial-gradient(1000px 600px at 10% 10%, #182235 0%, var(--bg) 60%);
+    }
+    .wrapper { max-width: 1100px; margin: 0 auto; padding: 24px; }
+    header { display:flex; align-items:center; gap:16px; flex-wrap:wrap; }
+    .logo { font-weight:800; font-size: clamp(20px, 4vw, 28px); letter-spacing: 0.4px; }
+    .pill { padding:6px 10px; border-radius: 999px; background: #1f2937; color:#cfe3ff; font-size:12px }
+
+    .card { background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02));
+            border: 1px solid rgba(255,255,255,0.08); border-radius: var(--radius);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.35); }
+
+    .controls, .game, .footer { padding: 18px; }
+    .controls { display:grid; gap: 14px; grid-template-columns: 1fr; margin-top:16px; }
+    .row { display:flex; gap:12px; flex-wrap:wrap; }
+    label { font-size: 13px; color: var(--muted); }
+
+    input[type="text"], input[type="url"] {
+      width: 100%; padding: 12px 14px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.08);
+      background: #0f172a; color: var(--text); outline: none;
+    }
+
+    button {
+      appearance: none; border: none; border-radius: 12px; padding: 12px 14px; font-weight: 700; letter-spacing: .2px;
+      color: #0b0f14; background: var(--accent2); cursor: pointer; transition: transform .05s ease, filter .15s ease; box-shadow: 0 6px 16px rgba(28,100,242,.35);
+    }
+    button.secondary { background: #1f2937; color: #d7e3f8; box-shadow:none; }
+    button.ghost { background: transparent; border: 1px solid rgba(255,255,255,.14); color: #d7e3f8; }
+    button.warning { background: var(--warning); color: #111827; box-shadow: 0 6px 16px rgba(245,158,11,.35); }
+    button.success { background: var(--accent); color: #03120a; box-shadow: 0 6px 16px rgba(34,197,94,.35); }
+    button.danger { background: var(--danger); color: #fff; box-shadow: 0 6px 16px rgba(239,68,68,.35); }
+    button:active { transform: translateY(1px); }
+    button[disabled] { filter: grayscale(.5) brightness(.7); cursor: not-allowed; }
+
+    .grid { display:grid; grid-template-columns: 2fr 1.2fr; gap: 16px; margin-top: 16px; }
+    @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+
+    .game { display:grid; gap: 12px; }
+    .hintBar { display:flex; gap:10px; align-items:center; font-size:13px; color: var(--muted); }
+    .hintChip { padding: 6px 10px; border: 1px dashed rgba(255,255,255,0.2); border-radius: 12px; }
+
+    .answers { display:grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .answers input { background:#0b1222 }
+
+    .scoreboard { padding: 18px; display:grid; gap: 10px; }
+    .scorebox { display:grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .score { background:#0f172a; border-radius: 12px; padding: 14px; border:1px solid rgba(255,255,255,.06) }
+
+    .trackArt { width: 100%; aspect-ratio: 1/1; background: #0f172a; border-radius: 16px; border:1px solid rgba(255,255,255,.06);
+      display:flex; align-items:center; justify-content:center; overflow:hidden; }
+    .trackArt img { width: 100%; height: 100%; object-fit: cover; filter: brightness(.6) saturate(.7) blur(10px); transform: scale(1.1); opacity:.2 }
+
+    .reveal { display:grid; gap: 8px; }
+    .revealedTitle { font-weight: 800; font-size: 18px; }
+
+    .tiny { font-size: 11px; color: var(--muted); }
+    a { color: #93c5fd; text-decoration: none; }
+    .successText { color: var(--accent); font-weight: 700; }
+    .failText { color: #fca5a5; font-weight: 700; }
+  </style>
 </head>
 <body>
-<h1>Playlist Heardle</h1>
-<div class="card">
-  <div id="loader">Loading playlist…</div>
-  <div id="gameArea" class="hide">
-    <audio id="audio" preload="auto"></audio>
-    <div id="attempts"></div>
-    <input id="guessInput" placeholder="Type your guess" list="suggestions" autocomplete="off">
-    <datalist id="suggestions"></datalist>
-    <button id="guessBtn">Guess</button>
-    <div id="message"></div>
-    <div id="reveal" class="hide"></div>
-    <button id="nextBtn" class="hide">Play again</button>
+<div class="wrapper">
+  <header>
+    <div class="logo">🎵 Guess the Song</div>
+    <div class="pill">Snippets from any Spotify playlist – plays ~1 second</div>
+  </header>
+
+  <section class="controls card">
+    <div class="row">
+      <button id="loginBtn" title="Authenticate with Spotify (PKCE – no server)">1) Login to Spotify</button>
+      <button id="logoutBtn" class="ghost" style="display:none">Logout</button>
+      <div id="authState" class="pill" style="display:none"></div>
+    </div>
+
+    <div class="row">
+      <div style="flex: 1 1 520px; min-width:280px">
+        <label for="playlistUrl">Playlist URL or ID</label>
+        <input type="url" id="playlistUrl" placeholder="https://open.spotify.com/playlist/xxxxxxxxx or ID" />
+      </div>
+      <div style="flex: 0 0 auto; align-self:flex-end">
+        <button id="loadBtn" class="secondary" title="Loads tracks with 30s previews">2) Load playlist</button>
+      </div>
+    </div>
+
+    <div class="tiny">Notes: This page uses the Spotify Web API directly from your browser via the <b>PKCE</b> flow, storing your token only in <b>localStorage</b>. Public playlists need no scopes. Private/collaborative playlists require
+      <code>playlist-read-private</code> / <code>playlist-read-collaborative</code> and you’ll be prompted to approve them. Only tracks with a <i>preview_url</i> can be played (Spotify provides ~30‑sec MP3 previews).</div>
+  </section>
+
+  <div class="grid">
+    <section class="game card">
+      <div class="trackArt" id="art">
+        <span class="tiny">Artwork hidden during guessing…</span>
+      </div>
+
+      <div class="hintBar">
+        <span id="trackCount" class="hintChip">0 tracks loaded</span>
+        <span id="snippetInfo" class="hintChip">Snippet: ~1.0s from random offset</span>
+        <span class="hintChip">Need a click to play due to browser policies</span>
+      </div>
+
+      <div class="row">
+        <button id="playBtn" class="success" disabled>▶︎ Play 1‑second snippet</button>
+        <button id="replayBtn" class="secondary" disabled>↻ Replay snippet</button>
+        <button id="revealBtn" class="warning" disabled>Reveal answer</button>
+        <button id="nextBtn" class="ghost" disabled>Next track →</button>
+      </div>
+
+      <div class="answers">
+        <div>
+          <label for="guessTitle">Song title</label>
+          <input id="guessTitle" type="text" placeholder="Type the title…" />
+        </div>
+        <div>
+          <label for="guessArtist">Artist</label>
+          <input id="guessArtist" type="text" placeholder="Type the artist…" />
+        </div>
+      </div>
+
+      <div class="row">
+        <button id="submitBtn">Submit guess</button>
+        <div id="feedback" class="pill" style="display:none"></div>
+      </div>
+
+      <div class="reveal">
+        <div id="revealed" class="revealedTitle" style="display:none"></div>
+        <div id="openInSpotify" style="display:none"></div>
+      </div>
+
+      <audio id="audio" crossorigin="anonymous"></audio>
+    </section>
+
+    <aside class="scoreboard card">
+      <div class="scorebox">
+        <div class="score">
+          <div class="tiny">Round</div>
+          <div id="round">0</div>
+        </div>
+        <div class="score">
+          <div class="tiny">Score</div>
+          <div id="score">0</div>
+        </div>
+      </div>
+      <div class="score">
+        <div class="tiny">Rules</div>
+        <ul>
+          <li>+1 point for correct <b>song title</b></li>
+          <li>+1 point for correct <b>artist</b> (any featured artist counts)</li>
+          <li>Type either/both, then <b>Submit</b>. You can <i>Reveal</i> any time (no points).</li>
+          <li>Snippet is ~1 second chosen from a random spot in the 30‑sec preview.</li>
+        </ul>
+      </div>
+      <div class="score">
+        <div class="tiny">Tips</div>
+        <ul>
+          <li>If nothing plays, pick another track: many songs lack preview audio.</li>
+          <li>Make sure you clicked <b>Login to Spotify</b> and loaded a <b>public</b> playlist.</li>
+          <li>Private/collaborative playlists: add scopes during login.</li>
+        </ul>
+      </div>
+    </aside>
   </div>
+
+  <footer class="footer tiny card">
+    Built with the Spotify Web API (PKCE client-side). No servers, no tracking.
+  </footer>
 </div>
 
 <script>
-/********************** CONSTANTS ************************/
-const CLIENT_ID     = 'e1141482037c4c08a0d9670a936a0a9d';
-const CLIENT_SECRET = '9862fc5d083d42af8c3035035b55cb57';
-const PLAYLIST_URL  = 'https://open.spotify.com/playlist/2Eg9MpQckgDbdKCwpyFY3o?si=c354d72972d141ba';
-const EXPIRY_MS     = 3600*1000; // 1 h
-/********************** DOM ******************************/
-const $            = id=>document.getElementById(id);
-const loader       = $("loader");
-const gameArea     = $("gameArea");
-const audio        = $("audio");
-const attemptsDiv  = $("attempts");
-const suggestions  = $("suggestions");
-const guessInp     = $("guessInput");
-const guessBtn     = $("guessBtn");
-const message      = $("message");
-const reveal       = $("reveal");
-const nextBtn      = $("nextBtn");
-/******************* STORAGE HELPERS *********************/
-function now(){return Date.now();}
-function save(k,v){localStorage.setItem(k,v);}  
-function load(k){return localStorage.getItem(k);} 
-const TOKEN_KEY='ph_auto_token'; const TOKEN_TS='ph_auto_ts';
-function cacheToken(tok,ttl){save(TOKEN_KEY,tok); save(TOKEN_TS, now().toString()); save('ph_auto_ttl',ttl.toString());}
-function getCachedToken(){
-  const tok=load(TOKEN_KEY); const ts=parseInt(load(TOKEN_TS)||0,10); const ttl=parseInt(load('ph_auto_ttl')||EXPIRY_MS,10);
-  return (tok && now()-ts < ttl-5e3) ? tok : null;
-}
-/********************** LOGIC ****************************/
-let tracks=[];let current;let attempt=0;const maxAttempts=6;const snippets=[1,2,4,7,11,16];
+// ===== Utility: PKCE OAuth (client-side, no server) =====
+const SPOTIFY_AUTH_URL = 'https://accounts.spotify.com/authorize';
+const SPOTIFY_API = 'https://api.spotify.com/v1';
 
-async function fetchClientCredsToken(){
-  console.log('[Token] Requesting new client‑credentials token…');
-  const body=new URLSearchParams({grant_type:'client_credentials'});
-  const res=await fetch('https://accounts.spotify.com/api/token',{
-    method:'POST',
-    headers:{'Content-Type':'application/x-www-form-urlencoded','Authorization':'Basic '+btoa(CLIENT_ID+':'+CLIENT_SECRET)},
-    body
+// Fixed Spotify credentials
+const FIXED_CLIENT_ID = 'e1141482037c4c08a0d9670a936a0a9d';
+const REDIRECT_URI = 'https://www.chancha.it/guess_song/index.html';
+
+// Minimal helpers
+const $ = (id) => document.getElementById(id);
+const state = {
+  accessToken: null,
+  codeVerifier: null,
+  playlist: [],
+  round: 0,
+  score: 0,
+  current: null,
+  audioReady: false,
+  snippetStart: 0,
+  snippetLen: 1.05, // seconds
+};
+
+function saveLocal(key, val){ localStorage.setItem(key, JSON.stringify(val)); }
+function readLocal(key){ try { return JSON.parse(localStorage.getItem(key)); } catch { return null; } }
+
+// PKCE helpers
+async function sha256(plain) { const enc = new TextEncoder().encode(plain); const buf = await crypto.subtle.digest('SHA-256', enc); return new Uint8Array(buf); }
+function base64url(bytes) {
+  let str = btoa(String.fromCharCode.apply(null, bytes));
+  return str.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/,'');
+}
+function randomString(len=64){
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~';
+  let out=''; for(let i=0;i<len;i++){ out += chars[Math.floor(Math.random()*chars.length)]; }
+  return out;
+}
+
+async function beginLogin(){
+  const verifier = randomString(64);
+  const challenge = base64url(await sha256(verifier));
+  const params = new URLSearchParams({
+    response_type: 'code',
+    client_id: FIXED_CLIENT_ID,
+    code_challenge_method: 'S256',
+    code_challenge: challenge,
+    redirect_uri: REDIRECT_URI,
+    scope: '',
   });
-  if(!res.ok) throw new Error('Client‑credentials request failed '+res.status);
-  const json=await res.json();
-  console.log('[Token] Received – expires_in',json.expires_in,'s');
-  cacheToken(json.access_token,json.expires_in*1000);
-  return json.access_token;
+  saveLocal('spotify_verifier', verifier);
+  saveLocal('spotify_client_id', FIXED_CLIENT_ID);
+  location.href = `${SPOTIFY_AUTH_URL}?${params.toString()}`;
 }
-async function ensureToken(){
-  const cached=getCachedToken();
-  if(cached){console.log('[Token] Using cached token');return cached;}
-  return fetchClientCredsToken();
-}
-async function loadSpotify(url,token){
-  console.log('[Playlist] Loading tracks from',url);
-  const idMatch=url.match(/playlist\/([a-zA-Z0-9]+)/);
-  if(!idMatch) throw new Error('Could not parse playlist id');
-  const id=idMatch[1]; const hdrs={Authorization:'Bearer '+token};
-  let next=`https://api.spotify.com/v1/playlists/${id}/tracks?fields=items(track(name,preview_url,artists(name))),next&limit=100`;
-  const list=[];
-  while(next){
-    console.log('[Playlist] Fetching',next);
-    const res=await fetch(next,{headers:hdrs}); if(!res.ok){
-      if(res.status===401){ // token expired mid‑flight
-        console.warn('[Playlist] Token expired – refreshing');
-        token=await fetchClientCredsToken(); hdrs.Authorization='Bearer '+token; continue; // retry loop
-      }
-      throw new Error('Spotify error '+res.status);
-    }
-    const data=await res.json();
-    data.items.forEach(it=>{const t=it.track;if(t&&t.preview_url)list.push({name:t.name,artist:t.artists.map(a=>a.name).join(', '),preview:t.preview_url});});
-    next=data.next;
-  }
-  console.log(`[Playlist] Got ${list.length} tracks with previews`);
-  return list;
-}
-function buildAutocomplete(){
-  suggestions.innerHTML='';
-  tracks.forEach(t=>{const o=document.createElement('option');o.value=`${t.name} – ${t.artist}`;suggestions.appendChild(o);});
-}
-function playSnippet(){
-  audio.src=current.preview;audio.currentTime=0;
-  audio.play().catch(console.error);
-  setTimeout(()=>audio.pause(),snippets[Math.min(attempt,snippets.length-1)]*1000);
-  console.log('[Game] Playing snippet',snippets[Math.min(attempt,snippets.length-1)],'s');
-}
-function startGame(){
-  attempt=0;attemptsDiv.innerHTML='';message.textContent='';reveal.classList.add('hide');nextBtn.classList.add('hide');
-  current=tracks[Math.floor(Math.random()*tracks.length)];
-  console.log('[Game] New round – answer is',current.name,'–',current.artist);
-  buildAutocomplete(); playSnippet(); gameArea.classList.remove('hide');
-}
-function handleGuess(){
-  const val=guessInp.value.trim();if(!val)return;
-  const correct=val.toLowerCase().includes(current.name.toLowerCase());
-  const div=document.createElement('div');div.textContent=val;div.classList.add(correct?'correct':'wrong');attemptsDiv.appendChild(div);
-  console.log('[Game] Guess',attempt+1,':',val,'→',correct?'CORRECT':'wrong');
-  attempt++;
-  if(correct||attempt>=maxAttempts) endGame(correct); else {message.textContent='Incorrect – try again'; playSnippet();}
-  guessInp.value='';
-}
-function endGame(won){
-  message.textContent=won?'🎉 Correct!':'💀 Out of attempts';
-  reveal.textContent=`Answer: ${current.name} – ${current.artist}`; reveal.classList.remove('hide'); nextBtn.classList.remove('hide'); audio.pause();
-  console.log('[Game] Round ended –',won?'won':'lost');
-}
-/******************** EVENT BINDINGS *******************/
-window.addEventListener('DOMContentLoaded',async()=>{
-  try{
-    const token=await ensureToken();
-    const list=await loadSpotify(PLAYLIST_URL,token);
-    if(!list.length) throw new Error('No playable previews in playlist');
-    tracks=list; loader.classList.add('hide'); startGame();
-  }catch(e){ loader.textContent='Error: '+e.message; console.error(e); }
-});
 
-guessBtn.addEventListener('click',handleGuess);
-guessInp.addEventListener('keydown',e=>{if(e.key==='Enter')handleGuess();});
-nextBtn.addEventListener('click',startGame);
+async function finishLogin(){
+  const url = new URL(location.href);
+  const code = url.searchParams.get('code');
+  const error = url.searchParams.get('error');
+  if(error){ console.warn('Auth error:', error); }
+  if(!code) return;
+  const verifier = readLocal('spotify_verifier');
+  try {
+    const body = new URLSearchParams({
+      client_id: FIXED_CLIENT_ID,
+      grant_type: 'authorization_code',
+      code: code,
+      redirect_uri: REDIRECT_URI,
+      code_verifier: verifier,
+    });
+    const resp = await fetch('https://accounts.spotify.com/api/token', {
+      method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body
+    });
+    if(!resp.ok){ throw new Error('Token exchange failed'); }
+    const data = await resp.json();
+    state.accessToken = data.access_token;
+    saveLocal('spotify_access_token', data.access_token);
+    history.replaceState({}, document.title, location.pathname); // clean URL
+  } catch(e){
+    console.error(e); alert('Could not complete login. Check console.');
+  }
+}
+
+function loadAccessToken(){
+  const t = readLocal('spotify_access_token');
+  if(t){ state.accessToken = t; }
+}
+
+function setAuthUI(){
+  const authed = !!state.accessToken;
+  $('authState').style.display = authed ? 'inline-block':'none';
+  $('authState').textContent = authed ? 'Authenticated with Spotify' : '';
+  $('logoutBtn').style.display = authed ? 'inline-block':'none';
+}
+
+function logout(){
+  localStorage.removeItem('spotify_access_token');
+  $('authState').style.display = 'none';
+  $('logoutBtn').style.display = 'none';
+  state.accessToken = null;
+  alert('Logged out locally. Spotify may still consider your browser logged in for SSO.');
+}
+
+// ===== Playlist handling =====
+function extractPlaylistId(input){
+  let s = input.trim();
+  if(!s) return null;
+  try { const u = new URL(s); s = u.pathname.split('/').pop().split('?')[0]; } catch {}
+  return s;
+}
+
+async function fetchJSON(url){
+  const resp = await fetch(url, { headers: { Authorization: `Bearer ${state.accessToken}` } });
+  if(!resp.ok){
+    const e = await resp.text();
+    throw new Error('Spotify API error: ' + e);
+  }
+  return await resp.json();
+}
+
+async function loadPlaylist() {
+  if (!state.accessToken) {
+    alert('Login to Spotify first.');
+    return;
+  }
+
+  const pid = extractPlaylistId($('playlistUrl').value);
+  if (!pid) {
+    alert('Enter a valid playlist URL or ID.');
+    return;
+  }
+
+  state.playlist = [];
+
+  try {
+    let url = `${SPOTIFY_API}/playlists/${pid}/tracks?market=US&limit=100`;
+
+    while (url) {
+      const data = await fetchJSON(url);
+
+      for (const item of data.items) {
+        if (item.track && item.track.preview_url) {
+          state.playlist.push({
+            id: item.track.id,
+            title: item.track.name,
+            artist: item.track.artists.map(a => a.name).join(', '),
+            art: item.track.album?.images?.[0]?.url || '',
+            preview: item.track.preview_url,
+            uri: item.track.uri,
+          });
+        }
+      }
+
+      url = data.next;
+    }
+
+    if (state.playlist.length === 0) {
+      // fallback if no previews
+      console.warn('No previews in this playlist, loading fallback instead...');
+      $('trackCount').textContent = `0 tracks with previews found. Falling back.`;
+
+      // Spotify Top 50 Global (this usually has previews)
+      return loadFallbackPlaylist("37i9dQZEVXbMDoHDwVN2tF");
+    }
+
+    $('trackCount').textContent = `${state.playlist.length} track(s) with previews loaded`;
+    $('playBtn').disabled = false;
+
+  } catch (e) {
+    console.error('[Playlist Load Error]', e);
+    $('game').innerHTML = `
+      <div class="bg-gray-800 p-4 rounded text-red-400">
+        ❌ Could not load playlist. Check the console for details.
+      </div>`;
+    $('playBtn').disabled = true;
+  }
+}
+
+async function loadFallbackPlaylist(fallbackId) {
+  state.playlist = [];
+  let url = `${SPOTIFY_API}/playlists/${fallbackId}/tracks?market=US&limit=100`;
+
+  while (url) {
+    const data = await fetchJSON(url);
+    for (const item of data.items) {
+      if (item.track && item.track.preview_url) {
+        state.playlist.push({
+          id: item.track.id,
+          title: item.track.name,
+          artist: item.track.artists.map(a => a.name).join(', '),
+          art: item.track.album?.images?.[0]?.url || '',
+          preview: item.track.preview_url,
+          uri: item.track.uri,
+        });
+      }
+    }
+    url = data.next;
+  }
+
+  $('trackCount').textContent = `${state.playlist.length} fallback tracks loaded`;
+  $('playBtn').disabled = state.playlist.length === 0;
+}
+
+
+// ===== Game logic =====
+function pickRandomTrack() {
+  if (!state.playlist.length) return null;
+  return state.playlist[Math.floor(Math.random() * state.playlist.length)];
+}
+
+function setupRound() {
+  state.current = pickRandomTrack();
+  if (!state.current) return;
+  state.round++;
+  $('round').textContent = state.round;
+  $('revealed').style.display = 'none';
+  $('openInSpotify').style.display = 'none';
+  $('feedback').style.display = 'none';
+  $('guessTitle').value = '';
+  $('guessArtist').value = '';
+  $('playBtn').disabled = false;
+  $('replayBtn').disabled = true;
+  $('revealBtn').disabled = true;
+  $('nextBtn').disabled = true;
+  $('art').innerHTML = '<span class="tiny">Artwork hidden during guessing…</span>';
+  state.audioReady = false;
+}
+
+function playSnippet() {
+  if (!state.current) return;
+  const audio = $('audio');
+  audio.src = state.current.preview;
+  audio.currentTime = Math.random() * 25; // random offset inside 30s
+  state.snippetStart = audio.currentTime;
+  audio.play();
+  state.audioReady = true;
+  $('replayBtn').disabled = false;
+  $('revealBtn').disabled = false;
+  $('nextBtn').disabled = false;
+}
+
+function replaySnippet() {
+  if (!state.audioReady) return;
+  const audio = $('audio');
+  audio.currentTime = state.snippetStart;
+  audio.play();
+}
+
+function submitGuess() {
+  if (!state.current) return;
+  const titleGuess = $('guessTitle').value.toLowerCase().trim();
+  const artistGuess = $('guessArtist').value.toLowerCase().trim();
+  let points = 0;
+  if (titleGuess && state.current.title.toLowerCase().includes(titleGuess)) {
+    points++;
+  }
+  if (artistGuess && state.current.artist.toLowerCase().includes(artistGuess)) {
+    points++;
+  }
+  if (points > 0) {
+    state.score += points;
+    $('feedback').textContent = `✅ Correct! +${points} point(s)`;
+    $('feedback').className = 'pill successText';
+  } else {
+    $('feedback').textContent = `❌ Not quite`;
+    $('feedback').className = 'pill failText';
+  }
+  $('feedback').style.display = 'inline-block';
+  $('score').textContent = state.score;
+}
+
+function revealAnswer() {
+  if (!state.current) return;
+  $('revealed').textContent = `${state.current.title} — ${state.current.artist}`;
+  $('revealed').style.display = 'block';
+  $('openInSpotify').innerHTML = `<a href="https://open.spotify.com/track/${state.current.id}" target="_blank">Open in Spotify</a>`;
+  $('openInSpotify').style.display = 'block';
+  $('art').innerHTML = `<img src="${state.current.art}" alt="Album art"/>`;
+}
+
+// ===== Event bindings =====
+$('loginBtn').onclick = beginLogin;
+$('logoutBtn').onclick = logout;
+$('loadBtn').onclick = loadPlaylist;
+$('playBtn').onclick = playSnippet;
+$('replayBtn').onclick = replaySnippet;
+$('submitBtn').onclick = submitGuess;
+$('revealBtn').onclick = revealAnswer;
+$('nextBtn').onclick = setupRound;
+
+// ===== Init =====
+loadAccessToken();
+finishLogin().then(() => {
+  setAuthUI();
+});
+setAuthUI();
+
 </script>
 </body>
 </html>
