@@ -210,22 +210,31 @@ const state = {
   snippetLen: 1.05, // seconds
 };
 
-function saveLocal(key, val){ localStorage.setItem(key, JSON.stringify(val)); }
-function readLocal(key){ try { return JSON.parse(localStorage.getItem(key)); } catch { return null; } }
+function saveLocal(key, val) { localStorage.setItem(key, JSON.stringify(val)); }
+function readLocal(key) { try { return JSON.parse(localStorage.getItem(key)); } catch { return null; } }
 
 // PKCE helpers
-async function sha256(plain) { const enc = new TextEncoder().encode(plain); const buf = await crypto.subtle.digest('SHA-256', enc); return new Uint8Array(buf); }
+async function sha256(plain) { 
+  const enc = new TextEncoder().encode(plain); 
+  const buf = await crypto.subtle.digest('SHA-256', enc); 
+  return new Uint8Array(buf); 
+}
+
 function base64url(bytes) {
   let str = btoa(String.fromCharCode.apply(null, bytes));
   return str.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/,'');
 }
-function randomString(len=64){
+
+function randomString(len=64) {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~';
-  let out=''; for(let i=0;i<len;i++){ out += chars[Math.floor(Math.random()*chars.length)]; }
+  let out = ''; 
+  for(let i = 0; i < len; i++) { 
+    out += chars[Math.floor(Math.random() * chars.length)]; 
+  }
   return out;
 }
 
-async function beginLogin(){
+async function beginLogin() {
   const verifier = randomString(64);
   const challenge = base64url(await sha256(verifier));
   const params = new URLSearchParams({
@@ -234,19 +243,19 @@ async function beginLogin(){
     code_challenge_method: 'S256',
     code_challenge: challenge,
     redirect_uri: REDIRECT_URI,
-    scope: '',
+    scope: 'playlist-read-private playlist-read-collaborative',
   });
   saveLocal('spotify_verifier', verifier);
   saveLocal('spotify_client_id', FIXED_CLIENT_ID);
   location.href = `${SPOTIFY_AUTH_URL}?${params.toString()}`;
 }
 
-async function finishLogin(){
+async function finishLogin() {
   const url = new URL(location.href);
   const code = url.searchParams.get('code');
   const error = url.searchParams.get('error');
-  if(error){ console.warn('Auth error:', error); }
-  if(!code) return;
+  if (error) { console.warn('Auth error:', error); }
+  if (!code) return;
   const verifier = readLocal('spotify_verifier');
   try {
     const body = new URLSearchParams({
@@ -257,49 +266,59 @@ async function finishLogin(){
       code_verifier: verifier,
     });
     const resp = await fetch('https://accounts.spotify.com/api/token', {
-      method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body
+      method: 'POST', 
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, 
+      body
     });
-    if(!resp.ok){ throw new Error('Token exchange failed'); }
+    if (!resp.ok) { throw new Error('Token exchange failed'); }
     const data = await resp.json();
     state.accessToken = data.access_token;
     saveLocal('spotify_access_token', data.access_token);
     history.replaceState({}, document.title, location.pathname); // clean URL
-  } catch(e){
-    console.error(e); alert('Could not complete login. Check console.');
+  } catch (e) {
+    console.error(e); 
+    alert('Could not complete login. Check console.');
   }
 }
 
-function loadAccessToken(){
+function loadAccessToken() {
   const t = readLocal('spotify_access_token');
-  if(t){ state.accessToken = t; }
+  if (t) { state.accessToken = t; }
 }
 
-function setAuthUI(){
+function setAuthUI() {
   const authed = !!state.accessToken;
-  $('authState').style.display = authed ? 'inline-block':'none';
+  $('authState').style.display = authed ? 'inline-block' : 'none';
   $('authState').textContent = authed ? 'Authenticated with Spotify' : '';
-  $('logoutBtn').style.display = authed ? 'inline-block':'none';
+  $('logoutBtn').style.display = authed ? 'inline-block' : 'none';
+  $('loginBtn').style.display = authed ? 'none' : 'inline-block';
 }
 
-function logout(){
+function logout() {
   localStorage.removeItem('spotify_access_token');
   $('authState').style.display = 'none';
   $('logoutBtn').style.display = 'none';
+  $('loginBtn').style.display = 'inline-block';
   state.accessToken = null;
   alert('Logged out locally. Spotify may still consider your browser logged in for SSO.');
 }
 
 // ===== Playlist handling =====
-function extractPlaylistId(input){
+function extractPlaylistId(input) {
   let s = input.trim();
-  if(!s) return null;
-  try { const u = new URL(s); s = u.pathname.split('/').pop().split('?')[0]; } catch {}
+  if (!s) return null;
+  try { 
+    const u = new URL(s); 
+    s = u.pathname.split('/').pop().split('?')[0]; 
+  } catch {}
   return s;
 }
 
-async function fetchJSON(url){
-  const resp = await fetch(url, { headers: { Authorization: `Bearer ${state.accessToken}` } });
-  if(!resp.ok){
+async function fetchJSON(url) {
+  const resp = await fetch(url, { 
+    headers: { Authorization: `Bearer ${state.accessToken}` } 
+  });
+  if (!resp.ok) {
     const e = await resp.text();
     throw new Error('Spotify API error: ' + e);
   }
@@ -319,6 +338,8 @@ async function loadPlaylist() {
   }
 
   state.playlist = [];
+  $('playBtn').disabled = true;
+  $('trackCount').textContent = 'Loading...';
 
   try {
     let url = `${SPOTIFY_API}/playlists/${pid}/tracks?market=US&limit=100`;
@@ -343,52 +364,21 @@ async function loadPlaylist() {
     }
 
     if (state.playlist.length === 0) {
-      // fallback if no previews
-      console.warn('No previews in this playlist, loading fallback instead...');
-      $('trackCount').textContent = `0 tracks with previews found. Falling back.`;
-
-      // Spotify Top 50 Global (this usually has previews)
-      return loadFallbackPlaylist("37i9dQZEVXbMDoHDwVN2tF");
+      $('trackCount').textContent = '0 tracks with previews found';
+      alert('This playlist has no tracks with preview audio. Try another playlist.');
+      return;
     }
 
     $('trackCount').textContent = `${state.playlist.length} track(s) with previews loaded`;
     $('playBtn').disabled = false;
+    setupRound(); // Start the first round automatically
 
   } catch (e) {
     console.error('[Playlist Load Error]', e);
-    $('game').innerHTML = `
-      <div class="bg-gray-800 p-4 rounded text-red-400">
-        ❌ Could not load playlist. Check the console for details.
-      </div>`;
-    $('playBtn').disabled = true;
+    $('trackCount').textContent = 'Error loading playlist';
+    alert('Could not load playlist. Make sure:\n1. You are logged in\n2. The playlist is public\n3. You have the correct permissions');
   }
 }
-
-async function loadFallbackPlaylist(fallbackId) {
-  state.playlist = [];
-  let url = `${SPOTIFY_API}/playlists/${fallbackId}/tracks?market=US&limit=100`;
-
-  while (url) {
-    const data = await fetchJSON(url);
-    for (const item of data.items) {
-      if (item.track && item.track.preview_url) {
-        state.playlist.push({
-          id: item.track.id,
-          title: item.track.name,
-          artist: item.track.artists.map(a => a.name).join(', '),
-          art: item.track.album?.images?.[0]?.url || '',
-          preview: item.track.preview_url,
-          uri: item.track.uri,
-        });
-      }
-    }
-    url = data.next;
-  }
-
-  $('trackCount').textContent = `${state.playlist.length} fallback tracks loaded`;
-  $('playBtn').disabled = state.playlist.length === 0;
-}
-
 
 // ===== Game logic =====
 function pickRandomTrack() {
@@ -420,18 +410,24 @@ function playSnippet() {
   audio.src = state.current.preview;
   audio.currentTime = Math.random() * 25; // random offset inside 30s
   state.snippetStart = audio.currentTime;
-  audio.play();
-  state.audioReady = true;
-  $('replayBtn').disabled = false;
-  $('revealBtn').disabled = false;
-  $('nextBtn').disabled = false;
+  audio.play()
+    .then(() => {
+      state.audioReady = true;
+      $('replayBtn').disabled = false;
+      $('revealBtn').disabled = false;
+      $('nextBtn').disabled = false;
+    })
+    .catch(e => {
+      console.error('Playback failed:', e);
+      alert('Playback failed. Some tracks may not be playable in your region.');
+    });
 }
 
 function replaySnippet() {
   if (!state.audioReady) return;
   const audio = $('audio');
   audio.currentTime = state.snippetStart;
-  audio.play();
+  audio.play().catch(e => console.error('Replay failed:', e));
 }
 
 function submitGuess() {
@@ -439,12 +435,14 @@ function submitGuess() {
   const titleGuess = $('guessTitle').value.toLowerCase().trim();
   const artistGuess = $('guessArtist').value.toLowerCase().trim();
   let points = 0;
+  
   if (titleGuess && state.current.title.toLowerCase().includes(titleGuess)) {
     points++;
   }
   if (artistGuess && state.current.artist.toLowerCase().includes(artistGuess)) {
     points++;
   }
+  
   if (points > 0) {
     state.score += points;
     $('feedback').textContent = `✅ Correct! +${points} point(s)`;
@@ -453,6 +451,7 @@ function submitGuess() {
     $('feedback').textContent = `❌ Not quite`;
     $('feedback').className = 'pill failText';
   }
+  
   $('feedback').style.display = 'inline-block';
   $('score').textContent = state.score;
 }
@@ -463,7 +462,7 @@ function revealAnswer() {
   $('revealed').style.display = 'block';
   $('openInSpotify').innerHTML = `<a href="https://open.spotify.com/track/${state.current.id}" target="_blank">Open in Spotify</a>`;
   $('openInSpotify').style.display = 'block';
-  $('art').innerHTML = `<img src="${state.current.art}" alt="Album art"/>`;
+  $('art').innerHTML = state.current.art ? `<img src="${state.current.art}" alt="Album art"/>` : '<span class="tiny">No artwork available</span>';
 }
 
 // ===== Event bindings =====
@@ -482,7 +481,6 @@ finishLogin().then(() => {
   setAuthUI();
 });
 setAuthUI();
-
 </script>
 </body>
 </html>
