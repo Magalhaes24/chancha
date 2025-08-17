@@ -192,9 +192,9 @@
 const SPOTIFY_AUTH_URL = 'https://accounts.spotify.com/authorize';
 const SPOTIFY_API = 'https://api.spotify.com/v1';
 
-// Fixed Spotify credentials
-const FIXED_CLIENT_ID = 'e1141482037c4c08a0d9670a936a0a9d';
-const REDIRECT_URI = 'https://www.chancha.it/guess_song/index.html';
+// Spotify credentials - replace with your own if needed
+const CLIENT_ID = 'e1141482037c4c08a0d9670a936a0a9d';
+const REDIRECT_URI = window.location.href.split('?')[0]; // Use current page as redirect URI
 
 // Minimal helpers
 const $ = (id) => document.getElementById(id);
@@ -239,14 +239,14 @@ async function beginLogin() {
   const challenge = base64url(await sha256(verifier));
   const params = new URLSearchParams({
     response_type: 'code',
-    client_id: FIXED_CLIENT_ID,
+    client_id: CLIENT_ID,
     code_challenge_method: 'S256',
     code_challenge: challenge,
     redirect_uri: REDIRECT_URI,
     scope: 'playlist-read-private playlist-read-collaborative',
   });
   saveLocal('spotify_verifier', verifier);
-  saveLocal('spotify_client_id', FIXED_CLIENT_ID);
+  saveLocal('spotify_client_id', CLIENT_ID);
   location.href = `${SPOTIFY_AUTH_URL}?${params.toString()}`;
 }
 
@@ -259,7 +259,7 @@ async function finishLogin() {
   const verifier = readLocal('spotify_verifier');
   try {
     const body = new URLSearchParams({
-      client_id: FIXED_CLIENT_ID,
+      client_id: CLIENT_ID,
       grant_type: 'authorization_code',
       code: code,
       redirect_uri: REDIRECT_URI,
@@ -275,9 +275,11 @@ async function finishLogin() {
     state.accessToken = data.access_token;
     saveLocal('spotify_access_token', data.access_token);
     history.replaceState({}, document.title, location.pathname); // clean URL
+    return true;
   } catch (e) {
     console.error(e); 
     alert('Could not complete login. Check console.');
+    return false;
   }
 }
 
@@ -296,57 +298,95 @@ function setAuthUI() {
 
 function logout() {
   localStorage.removeItem('spotify_access_token');
-  $('authState').style.display = 'none';
-  $('logoutBtn').style.display = 'none';
-  $('loginBtn').style.display = 'inline-block';
   state.accessToken = null;
-  alert('Logged out locally. Spotify may still consider your browser logged in for SSO.');
+  state.playlist = [];
+  setAuthUI();
+  $('trackCount').textContent = '0 tracks loaded';
+  $('playBtn').disabled = true;
+  alert('Logged out locally. To fully logout, you may need to logout from Spotify.com');
 }
 
 // ===== Playlist handling =====
 function extractPlaylistId(input) {
   let s = input.trim();
   if (!s) return null;
+  
+  // Handle Spotify URI format (spotify:playlist:...)
+  if (s.startsWith('spotify:playlist:')) {
+    return s.split(':')[2];
+  }
+  
   try { 
     const u = new URL(s); 
-    s = u.pathname.split('/').pop().split('?')[0]; 
-  } catch {}
-  return s;
+    // Handle both /playlist/ and /user/.../playlist/ formats
+    const parts = u.pathname.split('/');
+    const playlistIndex = parts.findIndex(part => part === 'playlist');
+    if (playlistIndex !== -1 && parts.length > playlistIndex + 1) {
+      return parts[playlistIndex + 1];
+    }
+    return null;
+  } catch {
+    // If it's not a URL, treat as raw ID (after removing any query params)
+    return s.split('?')[0];
+  }
 }
 
 async function fetchJSON(url) {
-  const resp = await fetch(url, { 
-    headers: { Authorization: `Bearer ${state.accessToken}` } 
-  });
-  if (!resp.ok) {
-    const e = await resp.text();
-    throw new Error('Spotify API error: ' + e);
+  try {
+    const resp = await fetch(url, { 
+      headers: { 
+        Authorization: `Bearer ${state.accessToken}`,
+        'Content-Type': 'application/json'
+      } 
+    });
+    
+    if (!resp.ok) {
+      const errorData = await resp.json();
+      console.error('Spotify API error:', errorData);
+      throw new Error(errorData.error.message || 'Unknown Spotify API error');
+    }
+    
+    return await resp.json();
+  } catch (e) {
+    console.error('Fetch error:', e);
+    throw e;
   }
-  return await resp.json();
 }
 
 async function loadPlaylist() {
   if (!state.accessToken) {
-    alert('Login to Spotify first.');
+    alert('Please login to Spotify first.');
     return;
   }
 
-  const pid = extractPlaylistId($('playlistUrl').value);
+  const playlistInput = $('playlistUrl').value.trim();
+  if (!playlistInput) {
+    alert('Please enter a playlist URL or ID.');
+    return;
+  }
+
+  const pid = extractPlaylistId(playlistInput);
   if (!pid) {
-    alert('Enter a valid playlist URL or ID.');
+    alert('Invalid playlist URL or ID format. Please use one of these formats:\n\n' +
+          '• https://open.spotify.com/playlist/37i9dQZEVXbKyJS56d1pgi\n' +
+          '• spotify:playlist:37i9dQZEVXbKyJS56d1pgi\n' +
+          '• 37i9dQZEVXbKyJS56d1pgi');
     return;
   }
 
   state.playlist = [];
   $('playBtn').disabled = true;
-  $('trackCount').textContent = 'Loading...';
+  $('trackCount').textContent = 'Loading playlist...';
+  $('loadBtn').disabled = true;
 
   try {
     let url = `${SPOTIFY_API}/playlists/${pid}/tracks?market=US&limit=100`;
+    let totalTracks = 0;
 
     while (url) {
       const data = await fetchJSON(url);
-
+      totalTracks = data.total || 0;
+      
       for (const item of data.items) {
         if (item.track && item.track.preview_url) {
           state.playlist.push({
@@ -364,31 +404,51 @@ async function loadPlaylist() {
     }
 
     if (state.playlist.length === 0) {
-      $('trackCount').textContent = '0 tracks with previews found';
-      alert('This playlist has no tracks with preview audio. Try another playlist.');
+      if (totalTracks > 0) {
+        $('trackCount').textContent = `${totalTracks} tracks found, but none have previews`;
+        alert('This playlist has tracks but none with preview audio. Spotify only provides previews for some tracks.');
+      } else {
+        $('trackCount').textContent = 'Playlist not found or empty';
+        alert('Could not find this playlist. It may be private or not exist. Make sure you have the correct permissions.');
+      }
       return;
     }
 
-    $('trackCount').textContent = `${state.playlist.length} track(s) with previews loaded`;
+    $('trackCount').textContent = `${state.playlist.length} tracks loaded (${totalTracks} total in playlist)`;
     $('playBtn').disabled = false;
     setupRound(); // Start the first round automatically
 
   } catch (e) {
     console.error('[Playlist Load Error]', e);
     $('trackCount').textContent = 'Error loading playlist';
-    alert('Could not load playlist. Make sure:\n1. You are logged in\n2. The playlist is public\n3. You have the correct permissions');
+    alert(`Could not load playlist: ${e.message}\n\n` +
+          'Possible reasons:\n' +
+          '1. The playlist is private and you need to login\n' +
+          '2. The playlist ID is incorrect\n' +
+          '3. Spotify API is having issues');
+  } finally {
+    $('loadBtn').disabled = false;
   }
 }
 
 // ===== Game logic =====
 function pickRandomTrack() {
   if (!state.playlist.length) return null;
-  return state.playlist[Math.floor(Math.random() * state.playlist.length)];
+  
+  // Filter out tracks that failed to play previously
+  const playableTracks = state.playlist.filter(track => !track.failed);
+  if (playableTracks.length === 0) return null;
+  
+  return playableTracks[Math.floor(Math.random() * playableTracks.length)];
 }
 
 function setupRound() {
   state.current = pickRandomTrack();
-  if (!state.current) return;
+  if (!state.current) {
+    alert('No playable tracks remaining. Try loading a different playlist.');
+    return;
+  }
+  
   state.round++;
   $('round').textContent = state.round;
   $('revealed').style.display = 'none';
@@ -406,10 +466,14 @@ function setupRound() {
 
 function playSnippet() {
   if (!state.current) return;
+  
   const audio = $('audio');
   audio.src = state.current.preview;
   audio.currentTime = Math.random() * 25; // random offset inside 30s
   state.snippetStart = audio.currentTime;
+  
+  $('playBtn').disabled = true;
+  
   audio.play()
     .then(() => {
       state.audioReady = true;
@@ -419,7 +483,9 @@ function playSnippet() {
     })
     .catch(e => {
       console.error('Playback failed:', e);
-      alert('Playback failed. Some tracks may not be playable in your region.');
+      state.current.failed = true; // Mark track as failed
+      $('playBtn').disabled = false;
+      alert('Could not play this track. It may not be available in your region. Try another track.');
     });
 }
 
@@ -432,10 +498,12 @@ function replaySnippet() {
 
 function submitGuess() {
   if (!state.current) return;
-  const titleGuess = $('guessTitle').value.toLowerCase().trim();
-  const artistGuess = $('guessArtist').value.toLowerCase().trim();
+  
+  const titleGuess = $('guessTitle').value.trim().toLowerCase();
+  const artistGuess = $('guessArtist').value.trim().toLowerCase();
   let points = 0;
   
+  // Case-insensitive partial matching
   if (titleGuess && state.current.title.toLowerCase().includes(titleGuess)) {
     points++;
   }
@@ -458,11 +526,21 @@ function submitGuess() {
 
 function revealAnswer() {
   if (!state.current) return;
+  
   $('revealed').textContent = `${state.current.title} — ${state.current.artist}`;
   $('revealed').style.display = 'block';
-  $('openInSpotify').innerHTML = `<a href="https://open.spotify.com/track/${state.current.id}" target="_blank">Open in Spotify</a>`;
-  $('openInSpotify').style.display = 'block';
-  $('art').innerHTML = state.current.art ? `<img src="${state.current.art}" alt="Album art"/>` : '<span class="tiny">No artwork available</span>';
+  
+  if (state.current.id) {
+    $('openInSpotify').innerHTML = 
+      `<a href="https://open.spotify.com/track/${state.current.id}" target="_blank" rel="noopener">Open in Spotify</a>`;
+    $('openInSpotify').style.display = 'block';
+  }
+  
+  if (state.current.art) {
+    $('art').innerHTML = `<img src="${state.current.art}" alt="Album art"/>`;
+  } else {
+    $('art').innerHTML = '<span class="tiny">No artwork available</span>';
+  }
 }
 
 // ===== Event bindings =====
@@ -476,11 +554,28 @@ $('revealBtn').onclick = revealAnswer;
 $('nextBtn').onclick = setupRound;
 
 // ===== Init =====
-loadAccessToken();
-finishLogin().then(() => {
-  setAuthUI();
+document.addEventListener('DOMContentLoaded', () => {
+  loadAccessToken();
+  
+  // Check for auth code in URL
+  const url = new URL(location.href);
+  if (url.searchParams.get('code')) {
+    finishLogin().then(success => {
+      setAuthUI();
+      if (success) {
+        // Auto-load playlist if URL contains one
+        const playlistParam = url.searchParams.get('playlist');
+        if (playlistParam) {
+          $('playlistUrl').value = playlistParam;
+          loadPlaylist();
+        }
+      }
+    });
+  } else {
+    setAuthUI();
+  }
 });
-setAuthUI();
 </script>
 </body>
 </html>
+
