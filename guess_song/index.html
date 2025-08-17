@@ -3,14 +3,14 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Guess the Song – Spotify Playlist (1‑Second Snippets)</title>
+  <title>Guess the Song – SoundCloud Edition</title>
   <style>
     :root {
       --bg: #0b0f14;
       --card: #121826;
       --muted: #7c8aa5;
       --text: #e6edf6;
-      --accent: #22c55e;
+      --accent: #ff8800;
       --accent2: #60a5fa;
       --danger: #ef4444;
       --warning: #f59e0b;
@@ -43,7 +43,7 @@
 
     button {
       appearance: none; border: none; border-radius: 12px; padding: 12px 14px; font-weight: 700; letter-spacing: .2px;
-      color: #0b0f14; background: var(--accent2); cursor: pointer; transition: transform .05s ease, filter .15s ease; box-shadow: 0 6px 16px rgba(28,100,242,.35);
+      color: #0b0f14; background: var(--accent); cursor: pointer; transition: transform .05s ease, filter .15s ease; box-shadow: 0 6px 16px rgba(255,136,0,.35);
     }
     button.secondary { background: #1f2937; color: #d7e3f8; box-shadow:none; }
     button.ghost { background: transparent; border: 1px solid rgba(255,255,255,.14); color: #d7e3f8; }
@@ -84,28 +84,21 @@
 <div class="wrapper">
   <header>
     <div class="logo">🎵 Guess the Song</div>
-    <div class="pill">Snippets from any Spotify playlist – plays ~1 second</div>
+    <div class="pill">SoundCloud Edition – plays random 1-second snippets</div>
   </header>
 
   <section class="controls card">
     <div class="row">
-      <button id="loginBtn" title="Authenticate with Spotify (PKCE – no server)">1) Login to Spotify</button>
-      <button id="logoutBtn" class="ghost" style="display:none">Logout</button>
-      <div id="authState" class="pill" style="display:none"></div>
-    </div>
-
-    <div class="row">
       <div style="flex: 1 1 520px; min-width:280px">
-        <label for="playlistUrl">Playlist URL or ID</label>
-        <input type="url" id="playlistUrl" placeholder="https://open.spotify.com/playlist/xxxxxxxxx or ID" />
+        <label for="trackUrl">SoundCloud Track URL or ID</label>
+        <input type="url" id="trackUrl" placeholder="https://soundcloud.com/artist/track or track ID" />
       </div>
       <div style="flex: 0 0 auto; align-self:flex-end">
-        <button id="loadBtn" class="secondary" title="Loads tracks with 30s previews">2) Load playlist</button>
+        <button id="loadBtn" title="Loads track for guessing">Load track</button>
       </div>
     </div>
 
-    <div class="tiny">Notes: This page uses the Spotify Web API directly from your browser via the <b>PKCE</b> flow, storing your token only in <b>localStorage</b>. Public playlists need no scopes. Private/collaborative playlists require
-      <code>playlist-read-private</code> / <code>playlist-read-collaborative</code> and you’ll be prompted to approve them. Only tracks with a <i>preview_url</i> can be played (Spotify provides ~30‑sec MP3 previews).</div>
+    <div class="tiny">Note: This uses SoundCloud's public API to fetch track information. Some tracks may not be available depending on your region.</div>
   </section>
 
   <div class="grid">
@@ -115,9 +108,8 @@
       </div>
 
       <div class="hintBar">
-        <span id="trackCount" class="hintChip">0 tracks loaded</span>
+        <span id="trackInfo" class="hintChip">No track loaded</span>
         <span id="snippetInfo" class="hintChip">Snippet: ~1.0s from random offset</span>
-        <span class="hintChip">Need a click to play due to browser policies</span>
       </div>
 
       <div class="row">
@@ -145,7 +137,7 @@
 
       <div class="reveal">
         <div id="revealed" class="revealedTitle" style="display:none"></div>
-        <div id="openInSpotify" style="display:none"></div>
+        <div id="openInSoundCloud" style="display:none"></div>
       </div>
 
       <audio id="audio" crossorigin="anonymous"></audio>
@@ -166,41 +158,35 @@
         <div class="tiny">Rules</div>
         <ul>
           <li>+1 point for correct <b>song title</b></li>
-          <li>+1 point for correct <b>artist</b> (any featured artist counts)</li>
+          <li>+1 point for correct <b>artist</b></li>
           <li>Type either/both, then <b>Submit</b>. You can <i>Reveal</i> any time (no points).</li>
-          <li>Snippet is ~1 second chosen from a random spot in the 30‑sec preview.</li>
+          <li>Snippet is ~1 second chosen from a random spot in the track.</li>
         </ul>
       </div>
       <div class="score">
         <div class="tiny">Tips</div>
         <ul>
-          <li>If nothing plays, pick another track: many songs lack preview audio.</li>
-          <li>Make sure you clicked <b>Login to Spotify</b> and loaded a <b>public</b> playlist.</li>
-          <li>Private/collaborative playlists: add scopes during login.</li>
+          <li>Works best with popular tracks that have full streaming available.</li>
+          <li>Some tracks may not play due to regional restrictions.</li>
+          <li>Try different tracks if one doesn't work.</li>
         </ul>
       </div>
     </aside>
   </div>
 
   <footer class="footer tiny card">
-    Built with the Spotify Web API (PKCE client-side). No servers, no tracking.
+    Built with SoundCloud's API. No servers, no tracking.
   </footer>
 </div>
 
 <script>
-// ===== Utility: PKCE OAuth (client-side, no server) =====
-const SPOTIFY_AUTH_URL = 'https://accounts.spotify.com/authorize';
-const SPOTIFY_API = 'https://api.spotify.com/v1';
-
-// Spotify credentials - replace with your own if needed
-const CLIENT_ID = 'e1141482037c4c08a0d9670a936a0a9d';
-const REDIRECT_URI = window.location.href.split('?')[0]; // Use current page as redirect URI
+// SoundCloud API helper
+const SOUNDCLOUD_API = 'https://api.soundcloud.com';
+const SOUNDCLOUD_CLIENT_ID = 'YOUR_SOUNDCLOUD_CLIENT_ID'; // Replace with your SoundCloud client ID
 
 // Minimal helpers
 const $ = (id) => document.getElementById(id);
 const state = {
-  accessToken: null,
-  codeVerifier: null,
   playlist: [],
   round: 0,
   score: 0,
@@ -210,249 +196,99 @@ const state = {
   snippetLen: 1.05, // seconds
 };
 
-function saveLocal(key, val) { localStorage.setItem(key, JSON.stringify(val)); }
-function readLocal(key) { try { return JSON.parse(localStorage.getItem(key)); } catch { return null; } }
-
-// PKCE helpers
-async function sha256(plain) { 
-  const enc = new TextEncoder().encode(plain); 
-  const buf = await crypto.subtle.digest('SHA-256', enc); 
-  return new Uint8Array(buf); 
-}
-
-function base64url(bytes) {
-  let str = btoa(String.fromCharCode.apply(null, bytes));
-  return str.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/,'');
-}
-
-function randomString(len=64) {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~';
-  let out = ''; 
-  for(let i = 0; i < len; i++) { 
-    out += chars[Math.floor(Math.random() * chars.length)]; 
-  }
-  return out;
-}
-
-async function beginLogin() {
-  const verifier = randomString(64);
-  const challenge = base64url(await sha256(verifier));
-  const params = new URLSearchParams({
-    response_type: 'code',
-    client_id: CLIENT_ID,
-    code_challenge_method: 'S256',
-    code_challenge: challenge,
-    redirect_uri: REDIRECT_URI,
-    scope: 'playlist-read-private playlist-read-collaborative',
-  });
-  saveLocal('spotify_verifier', verifier);
-  saveLocal('spotify_client_id', CLIENT_ID);
-  location.href = `${SPOTIFY_AUTH_URL}?${params.toString()}`;
-}
-
-async function finishLogin() {
-  const url = new URL(location.href);
-  const code = url.searchParams.get('code');
-  const error = url.searchParams.get('error');
-  if (error) { console.warn('Auth error:', error); }
-  if (!code) return;
-  const verifier = readLocal('spotify_verifier');
-  try {
-    const body = new URLSearchParams({
-      client_id: CLIENT_ID,
-      grant_type: 'authorization_code',
-      code: code,
-      redirect_uri: REDIRECT_URI,
-      code_verifier: verifier,
-    });
-    const resp = await fetch('https://accounts.spotify.com/api/token', {
-      method: 'POST', 
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, 
-      body
-    });
-    if (!resp.ok) { throw new Error('Token exchange failed'); }
-    const data = await resp.json();
-    state.accessToken = data.access_token;
-    saveLocal('spotify_access_token', data.access_token);
-    history.replaceState({}, document.title, location.pathname); // clean URL
-    return true;
-  } catch (e) {
-    console.error(e); 
-    alert('Could not complete login. Check console.');
-    return false;
-  }
-}
-
-function loadAccessToken() {
-  const t = readLocal('spotify_access_token');
-  if (t) { state.accessToken = t; }
-}
-
-function setAuthUI() {
-  const authed = !!state.accessToken;
-  $('authState').style.display = authed ? 'inline-block' : 'none';
-  $('authState').textContent = authed ? 'Authenticated with Spotify' : '';
-  $('logoutBtn').style.display = authed ? 'inline-block' : 'none';
-  $('loginBtn').style.display = authed ? 'none' : 'inline-block';
-}
-
-function logout() {
-  localStorage.removeItem('spotify_access_token');
-  state.accessToken = null;
-  state.playlist = [];
-  setAuthUI();
-  $('trackCount').textContent = '0 tracks loaded';
-  $('playBtn').disabled = true;
-  alert('Logged out locally. To fully logout, you may need to logout from Spotify.com');
-}
-
-// ===== Playlist handling =====
-function extractPlaylistId(input) {
+// Extract SoundCloud track ID from URL
+function extractTrackId(input) {
   let s = input.trim();
   if (!s) return null;
   
-  // Handle Spotify URI format (spotify:playlist:...)
-  if (s.startsWith('spotify:playlist:')) {
-    return s.split(':')[2];
+  // Handle SoundCloud URL format
+  if (s.includes('soundcloud.com')) {
+    try {
+      const url = new URL(s);
+      // SoundCloud URLs are typically soundcloud.com/artist/track
+      // We'll need to resolve this to get the actual track ID
+      return s; // We'll use the full URL for API resolution
+    } catch {
+      return null;
+    }
   }
   
-  try { 
-    const u = new URL(s); 
-    // Handle both /playlist/ and /user/.../playlist/ formats
-    const parts = u.pathname.split('/');
-    const playlistIndex = parts.findIndex(part => part === 'playlist');
-    if (playlistIndex !== -1 && parts.length > playlistIndex + 1) {
-      return parts[playlistIndex + 1];
-    }
-    return null;
-  } catch {
-    // If it's not a URL, treat as raw ID (after removing any query params)
-    return s.split('?')[0];
-  }
+  // If it's not a URL, treat as raw ID
+  return s;
 }
 
-async function fetchJSON(url) {
+// Fetch track info from SoundCloud
+async function fetchTrackInfo(trackInput) {
+  const trackId = extractTrackId(trackInput);
+  if (!trackId) {
+    throw new Error('Invalid SoundCloud track URL or ID');
+  }
+
+  // First resolve the URL if it's not a numeric ID
+  let resolveUrl = `${SOUNDCLOUD_API}/resolve?url=${encodeURIComponent(trackId)}&client_id=${SOUNDCLOUD_CLIENT_ID}`;
+  
   try {
-    const resp = await fetch(url, { 
-      headers: { 
-        Authorization: `Bearer ${state.accessToken}`,
-        'Content-Type': 'application/json'
-      } 
-    });
-    
-    if (!resp.ok) {
-      const errorData = await resp.json();
-      console.error('Spotify API error:', errorData);
-      throw new Error(errorData.error.message || 'Unknown Spotify API error');
+    const resolveResponse = await fetch(resolveUrl);
+    if (!resolveResponse.ok) {
+      throw new Error('Could not resolve SoundCloud track');
     }
     
-    return await resp.json();
+    const trackData = await resolveResponse.json();
+    
+    if (!trackData.streamable) {
+      throw new Error('This track is not streamable');
+    }
+    
+    return {
+      id: trackData.id,
+      title: trackData.title,
+      artist: trackData.user.username,
+      art: trackData.artwork_url || trackData.user.avatar_url || '',
+      streamUrl: `${trackData.stream_url}?client_id=${SOUNDCLOUD_CLIENT_ID}`,
+      duration: trackData.duration / 1000, // Convert ms to seconds
+      permalink_url: trackData.permalink_url
+    };
   } catch (e) {
-    console.error('Fetch error:', e);
-    throw e;
+    console.error('SoundCloud API error:', e);
+    throw new Error('Could not load track from SoundCloud');
   }
 }
 
-async function loadPlaylist() {
-  if (!state.accessToken) {
-    alert('Please login to Spotify first.');
+// Load a track into the game
+async function loadTrack() {
+  const trackInput = $('trackUrl').value.trim();
+  if (!trackInput) {
+    alert('Please enter a SoundCloud track URL or ID');
     return;
   }
 
-  const playlistInput = $('playlistUrl').value.trim();
-  if (!playlistInput) {
-    alert('Please enter a playlist URL or ID.');
-    return;
-  }
-
-  const pid = extractPlaylistId(playlistInput);
-  if (!pid) {
-    alert('Invalid playlist URL or ID format. Please use one of these formats:\n\n' +
-          '• https://open.spotify.com/playlist/37i9dQZEVXbKyJS56d1pgi\n' +
-          '• spotify:playlist:37i9dQZEVXbKyJS56d1pgi\n' +
-          '• 37i9dQZEVXbKyJS56d1pgi');
-    return;
-  }
-
-  state.playlist = [];
-  $('playBtn').disabled = true;
-  $('trackCount').textContent = 'Loading playlist...';
   $('loadBtn').disabled = true;
-
+  $('trackInfo').textContent = 'Loading track...';
+  
   try {
-    let url = `${SPOTIFY_API}/playlists/${pid}/tracks?market=US&limit=100`;
-    let totalTracks = 0;
-
-    while (url) {
-      const data = await fetchJSON(url);
-      totalTracks = data.total || 0;
-      
-      for (const item of data.items) {
-        if (item.track && item.track.preview_url) {
-          state.playlist.push({
-            id: item.track.id,
-            title: item.track.name,
-            artist: item.track.artists.map(a => a.name).join(', '),
-            art: item.track.album?.images?.[0]?.url || '',
-            preview: item.track.preview_url,
-            uri: item.track.uri,
-          });
-        }
-      }
-
-      url = data.next;
-    }
-
-    if (state.playlist.length === 0) {
-      if (totalTracks > 0) {
-        $('trackCount').textContent = `${totalTracks} tracks found, but none have previews`;
-        alert('This playlist has tracks but none with preview audio. Spotify only provides previews for some tracks.');
-      } else {
-        $('trackCount').textContent = 'Playlist not found or empty';
-        alert('Could not find this playlist. It may be private or not exist. Make sure you have the correct permissions.');
-      }
-      return;
-    }
-
-    $('trackCount').textContent = `${state.playlist.length} tracks loaded (${totalTracks} total in playlist)`;
+    const track = await fetchTrackInfo(trackInput);
+    state.playlist = [track]; // We'll just use one track at a time
+    $('trackInfo').textContent = `1 track loaded`;
     $('playBtn').disabled = false;
-    setupRound(); // Start the first round automatically
-
+    setupRound();
   } catch (e) {
-    console.error('[Playlist Load Error]', e);
-    $('trackCount').textContent = 'Error loading playlist';
-    alert(`Could not load playlist: ${e.message}\n\n` +
-          'Possible reasons:\n' +
-          '1. The playlist is private and you need to login\n' +
-          '2. The playlist ID is incorrect\n' +
-          '3. Spotify API is having issues');
+    console.error('Track load error:', e);
+    $('trackInfo').textContent = 'Error loading track';
+    alert(`Error: ${e.message}`);
   } finally {
     $('loadBtn').disabled = false;
   }
 }
 
-// ===== Game logic =====
-function pickRandomTrack() {
-  if (!state.playlist.length) return null;
-  
-  // Filter out tracks that failed to play previously
-  const playableTracks = state.playlist.filter(track => !track.failed);
-  if (playableTracks.length === 0) return null;
-  
-  return playableTracks[Math.floor(Math.random() * playableTracks.length)];
-}
-
+// Game logic
 function setupRound() {
-  state.current = pickRandomTrack();
-  if (!state.current) {
-    alert('No playable tracks remaining. Try loading a different playlist.');
-    return;
-  }
+  if (state.playlist.length === 0) return;
   
+  state.current = state.playlist[0]; // Just use the first (only) track
   state.round++;
   $('round').textContent = state.round;
   $('revealed').style.display = 'none';
-  $('openInSpotify').style.display = 'none';
+  $('openInSoundCloud').style.display = 'none';
   $('feedback').style.display = 'none';
   $('guessTitle').value = '';
   $('guessArtist').value = '';
@@ -468,11 +304,14 @@ function playSnippet() {
   if (!state.current) return;
   
   const audio = $('audio');
-  audio.src = state.current.preview;
-  audio.currentTime = Math.random() * 25; // random offset inside 30s
-  state.snippetStart = audio.currentTime;
+  audio.src = state.current.streamUrl;
   
-  $('playBtn').disabled = true;
+  // Calculate random position (avoiding very beginning/end)
+  const maxPos = Math.max(5, state.current.duration - 5);
+  const randomPos = Math.min(Math.random() * maxPos, maxPos - state.snippetLen);
+  
+  audio.currentTime = randomPos;
+  state.snippetStart = randomPos;
   
   audio.play()
     .then(() => {
@@ -480,12 +319,15 @@ function playSnippet() {
       $('replayBtn').disabled = false;
       $('revealBtn').disabled = false;
       $('nextBtn').disabled = false;
+      
+      // Automatically pause after snippet length
+      setTimeout(() => {
+        audio.pause();
+      }, state.snippetLen * 1000);
     })
     .catch(e => {
       console.error('Playback failed:', e);
-      state.current.failed = true; // Mark track as failed
-      $('playBtn').disabled = false;
-      alert('Could not play this track. It may not be available in your region. Try another track.');
+      alert('Could not play this track. It may not be available in your region.');
     });
 }
 
@@ -493,14 +335,20 @@ function replaySnippet() {
   if (!state.audioReady) return;
   const audio = $('audio');
   audio.currentTime = state.snippetStart;
-  audio.play().catch(e => console.error('Replay failed:', e));
+  audio.play()
+    .then(() => {
+      setTimeout(() => {
+        audio.pause();
+      }, state.snippetLen * 1000);
+    })
+    .catch(e => console.error('Replay failed:', e));
 }
 
 function submitGuess() {
   if (!state.current) return;
   
-  const titleGuess = $('guessTitle').value.trim().toLowerCase();
-  const artistGuess = $('guessArtist').value.trim().toLowerCase();
+  const titleGuess = $('guessTitle').value.toLowerCase().trim();
+  const artistGuess = $('guessArtist').value.toLowerCase().trim();
   let points = 0;
   
   // Case-insensitive partial matching
@@ -530,10 +378,10 @@ function revealAnswer() {
   $('revealed').textContent = `${state.current.title} — ${state.current.artist}`;
   $('revealed').style.display = 'block';
   
-  if (state.current.id) {
-    $('openInSpotify').innerHTML = 
-      `<a href="https://open.spotify.com/track/${state.current.id}" target="_blank" rel="noopener">Open in Spotify</a>`;
-    $('openInSpotify').style.display = 'block';
+  if (state.current.permalink_url) {
+    $('openInSoundCloud').innerHTML = 
+      `<a href="${state.current.permalink_url}" target="_blank" rel="noopener">Open in SoundCloud</a>`;
+    $('openInSoundCloud').style.display = 'block';
   }
   
   if (state.current.art) {
@@ -543,39 +391,19 @@ function revealAnswer() {
   }
 }
 
-// ===== Event bindings =====
-$('loginBtn').onclick = beginLogin;
-$('logoutBtn').onclick = logout;
-$('loadBtn').onclick = loadPlaylist;
+// Event bindings
+$('loadBtn').onclick = loadTrack;
 $('playBtn').onclick = playSnippet;
 $('replayBtn').onclick = replaySnippet;
 $('submitBtn').onclick = submitGuess;
 $('revealBtn').onclick = revealAnswer;
 $('nextBtn').onclick = setupRound;
 
-// ===== Init =====
+// Initialize
 document.addEventListener('DOMContentLoaded', () => {
-  loadAccessToken();
-  
-  // Check for auth code in URL
-  const url = new URL(location.href);
-  if (url.searchParams.get('code')) {
-    finishLogin().then(success => {
-      setAuthUI();
-      if (success) {
-        // Auto-load playlist if URL contains one
-        const playlistParam = url.searchParams.get('playlist');
-        if (playlistParam) {
-          $('playlistUrl').value = playlistParam;
-          loadPlaylist();
-        }
-      }
-    });
-  } else {
-    setAuthUI();
-  }
+  // You might want to load a default track here
+  // $('trackUrl').value = 'https://soundcloud.com/officialsoundcloud/we-wont-cooperate';
 });
 </script>
 </body>
 </html>
-
